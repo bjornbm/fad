@@ -1,32 +1,49 @@
 -- CVS version control block - do not edit manually
 --  $RCSfile: Fad.hs,v $
---  $Revision: 1.17 $
---  $Date: 2008-01-01 21:18:03 $
+--  $Revision: 1.23 $
+--  $Date: 2008-08-20 12:17:48 $
 --  $Source: /home/cvs/stalingrad/documentation/haskell/Fad.hs,v $
 
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# OPTIONS_GHC -fglasgow-exts #-}
 
 -- Forward Automatic Differentiation
-module Fad (lift, Dual,
+module Fad (lift,
             diffUU, diffUF, diffMU, diffMF,
             diffUU2, diffUF2, diffMU2, diffMF2,
             diff, grad, jacobian,
             zeroNewton, inverseNewton, fixedPointNewton, extremumNewton)
 where
 
-import Data.List(transpose)
+import List(transpose)
 
-version = "$Id: Fad.hs,v 1.17 2008-01-01 21:18:03 bap Exp $"
+version = "$Id: Fad.hs,v 1.23 2008-08-20 12:17:48 bap Exp $"
 
 -- Forward Automatic Differentiation via overloading to perform
 -- nonstandard interpretation that replaces original numeric type with
 -- corresponding dual number type.
 
+-- License:
+
+--  Copyright (C) 2008 Barak A. Pearlmutter & Jeffrey Mark Siskind
+--
+--  This program is free software; you can redistribute it and/or modify
+--  it under the terms of the GNU General Public License as published by
+--  the Free Software Foundation; either version 2 of the License, or
+--  (at your option) any later version.
+--
+--  This program is distributed in the hope that it will be useful,
+--  but WITHOUT ANY WARRANTY; without even the implied warranty of
+--  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+--  GNU General Public License for more details.
+--
+--  You should have received a copy of the GNU General Public License along
+--  with this program; if not, write to the Free Software Foundation, Inc.,
+--  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+
 -- Credits:
 
---  Authors:
---     Barak A. Pearlmutter <barak@cs.nuim.ie> & 
+--  Authors: Copyright 2008,
+--     Barak A. Pearlmutter <barak@cs.nuim.ie> &
 --     Jeffrey Mark Siskind <qobi@purdue.edu>
 
 --  Work started as stripped-down version of higher-order tower code
@@ -73,17 +90,16 @@ version = "$Id: Fad.hs,v 1.17 2008-01-01 21:18:03 bap Exp $"
 -- arbitrary functor on outputs.  This asymmetry is because Haskell
 -- provides fmap but not fzipWith.
 
-data Dual tag a = Bundle a a
+-- Other quirks:
+
+--  would need diffUFF for f:R->[[R]] and diffUFFF for f:R->[Maybe [R]], etc.
+
+--  type signature of diff stuff contaminates diff-using stuff, ick
+
+data Dual tag a = Bundle a a deriving Show
 
 lift :: Num a => a -> Dual tag a
 lift = flip Bundle 0
-
-instance Show a => Show (Dual tag a) where
-    show (Bundle x x') =
-        "(" ++ show x ++ c ++ sx' ++ "eps)"
-        where sx' = show x'
-              c = if (sx' !! 0 == '-') then "" else "+"
-        -- "(Bundle " ++ show x ++ show x' ++ ")"
 
 -- Some care has been taken to ensure that correct interoperation with
 -- complex numbers.  Particular care must be taken with the
@@ -150,11 +166,11 @@ instance Num a => Num (Dual tag a) where
 --     conjugate (Bundle x x') = Bundle (conjugate x) (conjugate x')
 --     ...
 
--- This fails because Complex is not sufficiently abstract.  It is
--- impossible to make (Dual (Complex a)) a complex number; the system
--- can only do (Complex (Dual a)).  This makes it impossible to take
--- derivatives of complex functions using the same API as non-complex
--- functions.
+-- This fails because Complex in the standard prelude is not abstract
+-- enough.  It is impossible to make (Dual (Complex a)) a complex
+-- number; the system can only do (Complex (Dual a)).  This makes it
+-- impossible to take derivatives of complex functions using the same
+-- API as non-complex functions.
 
 instance Fractional a => Fractional (Dual tag a) where
     recip (Bundle x x')           = Bundle z (- x' * z * z) where z = recip x
@@ -223,7 +239,8 @@ instance (RealFloat a, RealFrac a) => RealFloat (Dual tag a) where
     decodeFloat (Bundle x x')    = decodeFloat x
     encodeFloat n i              = Bundle (encodeFloat n i)
                                    (error "not differentiable: encodeFloat")
-    scaleFloat   i (Bundle x x') = Bundle z (x' * z / x) where z = scaleFloat i x
+    scaleFloat   i (Bundle x x') = Bundle z (x' * z / x)
+        where z = scaleFloat i x
     isNaN          (Bundle x x') = isNaN x
     isInfinite     (Bundle x x') = isInfinite x
     isDenormalized (Bundle x x') = isDenormalized x
@@ -233,7 +250,8 @@ instance (RealFloat a, RealFrac a) => RealFloat (Dual tag a) where
                                  = Bundle (atan2 y x) ((y'*x-x'*y)/(x^2+y^2))
 
 instance RealFrac a => RealFrac (Dual tag a) where
-    properFraction (Bundle x x') = (z1, (Bundle z2 x')) where (z1,z2) = properFraction x
+    properFraction (Bundle x x') = (z1, (Bundle z2 x'))
+        where (z1,z2) = properFraction x
     truncate       (Bundle x x') = truncate x
     round          (Bundle x x') = round x
     ceiling        (Bundle x x') = ceiling x
@@ -243,10 +261,10 @@ instance Real a => Real (Dual tag a) where
     toRational (Bundle x x') = toRational x
 
 instance Eq a => Eq (Dual tag a) where
-    (Bundle x x') == (Bundle y y')    = x == y
+    (Bundle x x') == (Bundle y y')  =  x == y
 
 instance Ord a => Ord (Dual tag a) where
-    (Bundle x x') `compare` (Bundle y y')    = x `compare` y
+    (Bundle x x') `compare` (Bundle y y')  =  x `compare` y
 
 instance (Enum a, Num a) => Enum (Dual tag a) where
     succ     (Bundle x x') = Bundle (succ x) x'
@@ -278,7 +296,8 @@ diffUF :: (Num a, Functor f) =>
           (forall tag. Dual tag a -> f (Dual tag b)) -> a -> f b
 diffUF f = fmap tangent . f . flip Bundle 1
 
-diffMU :: Num a => (forall tag. [Dual tag a] -> Dual tag b) -> [a] -> [a] -> b
+diffMU :: Num a =>
+          (forall tag. [Dual tag a] -> Dual tag b) -> [a] -> [a] -> b
 diffMU f xs = tangent . f . zipWithBundle xs
 
 diffMF :: (Num a, Functor f) =>
@@ -298,7 +317,8 @@ diffMU2 :: (forall tag. [Dual tag a] -> Dual tag b) -> [a] -> [a] -> (b,b)
 diffMU2 f xs = dual2pair . f . zipWithBundle xs
 
 diffMF2 :: Functor f =>
-           (forall tag. [Dual tag a] -> f (Dual tag b)) -> [a] -> [a] -> (f b, f b)
+           (forall tag. [Dual tag a] -> f (Dual tag b))
+               -> [a] -> [a] -> (f b, f b)
 diffMF2 f xs = fduals2pair . f . zipWithBundle xs
 
 -- Common access patterns
@@ -310,7 +330,8 @@ grad :: Num a => (forall tag. [Dual tag a] -> Dual tag b) -> [a] -> [b]
 -- grad f = head . jacobian ((:[]) . f) -- Robot face, robot claw!
 grad f xs = map (diffMU f xs) (identity xs)
 
-jacobian :: Num a => (forall tag. [Dual tag a] -> [Dual tag b]) -> [a] -> [[b]]
+jacobian :: Num a =>
+            (forall tag. [Dual tag a] -> [Dual tag b]) -> [a] -> [[b]]
 jacobian f xs = transpose $ map (diffMF f xs) (identity xs)
 
 -- Utility functions for shared code in above
@@ -327,6 +348,9 @@ primal (Bundle x _) = x
 fprimal :: Functor f => f (Dual tag a) -> f a
 fprimal = fmap primal
 
+flift :: (Functor f, Num a) => f a -> f (Dual tag a)
+flift = fmap lift
+
 dual2pair :: Dual tag a -> (a,a)
 dual2pair (Bundle x x') = (x, x')
 
@@ -337,6 +361,26 @@ zipWithBundle :: [a] -> [a] -> [Dual tag a]
 zipWithBundle [] [] = []
 zipWithBundle (x:xs) (y:ys) = (Bundle x y):(zipWithBundle xs ys)
 zipWithBundle _ _ = error "zipWithBundle arguments, lengths differ"
+
+-- Lower a function over duals to a function over primals.
+-- Four variants, for unary/functorized domain/range.
+
+lowerUU :: (Num a, Num b) =>
+           (forall tag. Dual tag a -> Dual tag b) -> a -> b
+lowerUU f = primal . f . lift
+
+lowerUF :: (Num a, Functor fb, Num b) =>
+            (forall tag. Dual tag a -> fb (Dual tag b)) -> a -> (fb b)
+lowerUF f = fprimal . f . lift
+
+lowerFU :: (Functor fa, Num a, Num b) =>
+           (forall tag. fa (Dual tag a) -> Dual tag b) -> (fa a) -> b
+lowerFU f = primal . f . flift
+
+lowerFF :: (Functor fa, Num a, Functor fb, Num b) =>
+           (forall tag. fa (Dual tag a) -> fb (Dual tag b))
+               -> (fa a) -> (fb b)
+lowerFF f = fprimal . f . flift
 
 -- Create identity matrix, represented as list of lists of numbers.
 
@@ -349,29 +393,43 @@ identity xs
 -- Format matrix for convenient examination.  Also works on vectors.
 
 show2d :: Show a => [a] -> String
-show2d = ("["++) . (++"]") . (foldl1 $ (++) . (++"\n ")) . map show
+show2d = ("["++) . (++"]\n") . (foldl1 $ (++) . (++"\n ")) . map show
 
 -- Optimization
 -- Perhaps these should be in a module, named things like
 --   AD.Forward.Newton.findZero
 --   AD.Forward.Newton.inverse
 
--- Find a zero of a unary using Newton's method; produces a stream of
--- increasingly accurate results.
+-- Find a zero of a unary function using Newton's method; produces a
+-- stream of increasingly accurate results.
 
-zeroNewton :: Fractional a => (forall tag. Dual tag a -> Dual tag a) -> a -> [a]
+-- TEST CASE:
+--  take 10 $ zeroNewton (\x->x^2-4) 1  -- converge to 2.0
+
+-- TEST CASE
+--  :module Complex Fad
+--  take 10 $ zeroNewton ((+1).(^2)) (1 :+ 1)  -- converge to (0 +: 1)
+
+zeroNewton :: Fractional a =>
+              (forall tag. Dual tag a -> Dual tag a) -> a -> [a]
 zeroNewton f x0 = iterate (\x -> let (y,y') = diffUU2 f x in x - y/y') x0
 
 -- Invert a unary function using Newton's method; produces a stream of
 -- increasingly accurate results.
 
-inverseNewton :: Fractional a => (forall tag. Dual tag a -> Dual tag a) -> a -> a -> [a]
+-- TEST CASE:
+--   take 10 $ inverseNewton sqrt 1 (sqrt 10)  -- converge to 10
+
+inverseNewton :: Fractional a =>
+                 (forall tag. Dual tag a -> Dual tag a)
+                     -> a -> a -> [a]
 inverseNewton f x0 y = zeroNewton (\x -> (f x) - (lift y)) x0
 
 -- Find a fixedpoint of a unary function using Newton's method;
 -- produces a stream of increasingly accurate results.
 
-fixedPointNewton :: Fractional a => (forall tag. Dual tag a -> Dual tag a) -> a -> [a]
+fixedPointNewton :: Fractional a =>
+                    (forall tag. Dual tag a -> Dual tag a) -> a -> [a]
 fixedPointNewton f x0 = zeroNewton (\x -> (f x) - x) x0
 
 -- Find an extremum of a unary function using Newton's method;
@@ -382,6 +440,33 @@ extremumNewton :: Fractional a =>
                           Dual tag1 (Dual tag a) -> Dual tag1 (Dual tag a))
                       -> a -> [a]
 extremumNewton f x0 = zeroNewton (diffUU f) x0
+
+-- Multivariate optimization, based on naive-gradient-descent from
+-- stalingrad/examples/flow-tests/pre-saddle-1a.vlad
+-- Produces stream of increasingly accurate results.
+
+argminNaiveGradient :: (Fractional a, Ord a) =>
+                       (forall tag. [Dual tag a] -> Dual tag a)
+                           -> [a] -> [[a]]
+argminNaiveGradient f x0 =
+    let
+        gf = grad f
+        loop x fx gx eta i =
+            -- should check gx = 0 here
+            let
+                x1 = zipWith (+) x (map ((-eta)*) gx)
+                fx1 = lowerFU f x1
+                gx1 = gf x1
+            in
+              if eta == 0 then []
+              else if (fx1 > fx) then loop x fx gx (eta/2) 0
+                   else if all (==0) gx then []
+                        -- else if fx1 == fx then loop x1 fx1 gx1 eta (i+1)
+                        else x1:(if (i==10)
+                                 then loop x1 fx1 gx1 (eta*2) 0
+                                 else loop x1 fx1 gx1 eta (i+1))
+    in
+      loop x0 (lowerFU f x0) (gf x0) 0.1 0
 
 -- BUGS!  BUGS!  BUGS!  Or, test cases.
 
