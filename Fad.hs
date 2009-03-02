@@ -8,14 +8,14 @@
 {-# OPTIONS -fglasgow-exts #-}
 
 -- Forward Automatic Differentiation
-module FAD.Fad (lift, Dual,
+module Fad (lift, Dual,
             diffUU, diffUF, diffUF', diffMU, diffMF,
             diffUU2, diffUF2, diffMU2, diffMF2,
             diff, diff', grad, jacobian,
             zeroNewton, inverseNewton, fixedPointNewton, extremumNewton)
 where
 
-import List(transpose)
+import Data.List (transpose)
 
 version = "$Id: Fad.hs,v 1.23 2008-08-20 12:17:48 bap Exp $"
 
