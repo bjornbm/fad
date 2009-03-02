@@ -5,12 +5,13 @@
 --  $Source: /home/cvs/stalingrad/documentation/haskell/Fad.hs,v $
 
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# OPTIONS -fglasgow-exts #-}
 
 -- Forward Automatic Differentiation
-module Fad (lift,
-            diffUU, diffUF, diffMU, diffMF,
+module FAD.Fad (lift, Dual,
+            diffUU, diffUF, diffUF', diffMU, diffMF,
             diffUU2, diffUF2, diffMU2, diffMF2,
-            diff, grad, jacobian,
+            diff, diff', grad, jacobian,
             zeroNewton, inverseNewton, fixedPointNewton, extremumNewton)
 where
 
@@ -100,6 +101,8 @@ data Dual tag a = Bundle a a deriving Show
 
 lift :: Num a => a -> Dual tag a
 lift = flip Bundle 0
+
+apply f x = f (Bundle x 1)
 
 -- Some care has been taken to ensure that correct interoperation with
 -- complex numbers.  Particular care must be taken with the
@@ -289,12 +292,20 @@ instance (Enum a, Num a) => Enum (Dual tag a) where
 -- of arbitrary shape, which includes lists as a special case, on
 -- output.
 
+diff' :: Num a => (forall tag. Dual tag a -> Dual tag b) -> a -> (b, b)
+diff' f = dual2pair . apply f
+-- diff' f x = (y, y') where Bundle y y' = f (Bundle x 1)
+
 diffUU :: Num a => (forall tag. Dual tag a -> Dual tag b) -> a -> b
-diffUU f = tangent . f . flip Bundle 1
+diffUU f = tangent . apply f
 
 diffUF :: (Num a, Functor f) =>
           (forall tag. Dual tag a -> f (Dual tag b)) -> a -> f b
-diffUF f = fmap tangent . f . flip Bundle 1
+diffUF f = fmap tangent . apply f
+
+diffUF' :: (Num a, Functor f) =>
+           (forall tag. Dual tag a -> f (Dual tag b)) -> a -> (f b, f b)
+diffUF' f x = (fprimal y, ftangent y) where y = apply f x
 
 diffMU :: Num a =>
           (forall tag. [Dual tag a] -> Dual tag b) -> [a] -> [a] -> b
