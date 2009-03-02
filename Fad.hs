@@ -5,16 +5,17 @@
 --  $Source: /home/cvs/stalingrad/documentation/haskell/Fad.hs,v $
 
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# OPTIONS_GHC -fglasgow-exts #-}
 
 -- Forward Automatic Differentiation
-module Fad (lift,
+module Fad (lift, Dual,
             diffUU, diffUF, diffMU, diffMF,
             diffUU2, diffUF2, diffMU2, diffMF2,
             diff, grad, jacobian,
             zeroNewton, inverseNewton, fixedPointNewton, extremumNewton)
 where
 
-import List(transpose)
+import Data.List(transpose)
 
 version = "$Id: Fad.hs,v 1.17 2008-01-01 21:18:03 bap Exp $"
 
