@@ -1,22 +1,14 @@
--- CVS version control block - do not edit manually
---  $RCSfile: Fad.hs,v $
---  $Revision: 1.23 $
---  $Date: 2008-08-20 12:17:48 $
---  $Source: /home/cvs/stalingrad/documentation/haskell/Fad.hs,v $
-
 {-# LANGUAGE ScopedTypeVariables #-}
 
 -- Forward Automatic Differentiation
-module Fad (lift,
-            diffUU, diffUF, diffMU, diffMF,
+module Fad (diffUU, diffUF, diffMU, diffMF,
             diffUU2, diffUF2, diffMU2, diffMF2,
             diff, grad, jacobian,
-            zeroNewton, inverseNewton, fixedPointNewton, extremumNewton)
+            zeroNewton, inverseNewton, fixedPointNewton, extremumNewton
+)
 where
 
-import List(transpose)
-
-version = "$Id: Fad.hs,v 1.23 2008-08-20 12:17:48 bap Exp $"
+import List(transpose, mapAccumL)
 
 -- Forward Automatic Differentiation via overloading to perform
 -- nonstandard interpretation that replaces original numeric type with
@@ -59,11 +51,11 @@ version = "$Id: Fad.hs,v 1.23 2008-08-20 12:17:48 bap Exp $"
 
 -- To Do:
 
--- Extend to an infinite tower of derivatives (power series) rather
--- than just the first derivative.  Perhaps this could use the
--- existing power series module.
-
--- Add some more optimization routines, and some examples.
+--  Add some more optimization routines
+--  Add some examples
+--  Add pointers into literature
+--  Fix complex number issues (requires changes to standard prelude)
+--  Optimize for efficiency
 
 -- Notes:
 
@@ -84,11 +76,15 @@ version = "$Id: Fad.hs,v 1.23 2008-08-20 12:17:48 bap Exp $"
 
 -- The constructor is "Bundle" because dual numbers are tangent-vector
 -- bundles, in the terminology of differential geometry.  For the same
--- reason, the accessor is "tangent".
+-- reason, the accessor for the first derivative is "tangent".
 
 -- The multivariate case is handled as a list on inputs, but an
 -- arbitrary functor on outputs.  This asymmetry is because Haskell
 -- provides fmap but not fzipWith.
+
+-- The derivative towers can be truncated, using Zero.  Care is taken
+-- to preserve said trunction, when possible.
+
 
 -- Other quirks:
 
@@ -96,10 +92,8 @@ version = "$Id: Fad.hs,v 1.23 2008-08-20 12:17:48 bap Exp $"
 
 --  type signature of diff stuff contaminates diff-using stuff, ick
 
-data Dual tag a = Bundle a a deriving Show
 
-lift :: Num a => a -> Dual tag a
-lift = flip Bundle 0
+-- Misc Implementation Notes
 
 -- Some care has been taken to ensure that correct interoperation with
 -- complex numbers.  Particular care must be taken with the
@@ -133,30 +127,154 @@ lift = flip Bundle 0
 -- Except that conjugate is defined only for complex numbers, which is
 -- strange since it would just be the identity for real numbers.
 
-instance Num a => Num (Dual tag a) where
-    (Bundle x x') + (Bundle y y') = Bundle (x + y)    (x' + y')
-    (Bundle x x') - (Bundle y y') = Bundle (x - y)    (x' - y')
-    (Bundle x x') * (Bundle y y') = Bundle (x * y)    (x' * y + x * y')
-    negate (Bundle x x')          = Bundle (negate x) (negate x')
-    abs (Bundle 0 _)              = Bundle 0 (error "not differentiable: abs(0)")
-    abs (Bundle x x')             = let s = signum x; s' = signum x'
-                                    in Bundle (abs x)
-                                       (if (s == 1 || s == (-1))
-                                               && (s' == 1 || s' == (-1))
-                                        then (x' * s)
-                                        else error "not differentiable: abs(complex)")
-    signum (Bundle 0 _)           = Bundle 0 (error "not differentiable: signum(0)")
-    signum (Bundle x x')          = let s = signum x; s' = signum x'
-                                    in Bundle s
-                                       (if (s == 1 || s == (-1))
-                                               && (s' == 1 || s' == (-1))
-                                        then 0
-                                        else error "not differentiable: signum(complex)")
-    fromInteger i                 = lift (fromInteger i)
+data Dual tag a = Bundle a (Dual tag a) | Zero deriving Show
 
--- Another problem supporting complex numbers!  This is a show stopper
--- for doing transparent forward AD on functions that are explicitly
--- over complex numbers.
+-- Injectors and accessors for derivative towers
+
+lift :: Num a => a -> Dual tag a
+lift = flip Bundle Zero
+
+liftOne :: Num a => a -> Dual tag a
+liftOne = flip Bundle (lift 1)
+
+towerElt :: Num a => Int -> Dual tag a -> a
+towerElt 0 (Bundle x0 _) = x0
+towerElt i (Bundle _ x') = if i<0
+                           then error "negative index"
+                           else towerElt (i-1) x'
+towerElt i Zero = if i<0
+                  then error "negative index"
+                  else 0
+
+towerList :: Dual tag a -> [a]
+towerList Zero = []
+towerList (Bundle x0 x') = x0:towerList x'
+
+primal :: Num a => Dual tag a -> a
+primal = towerElt 0
+
+tangent :: Num a => Dual tag a -> a
+tangent = towerElt 1
+
+tangentTower :: Num a => Dual tag a -> Dual tag a
+tangentTower Zero = Zero
+tangentTower (Bundle x0 x') = x'
+
+-- Evaluate function using an i-th order Taylor series
+
+taylor :: Fractional a => (Dual tag a -> Dual tag a) -> a -> a -> [a]
+
+taylor f x dx = snd
+                $ mapAccumL (\a t -> (a+t,a)) 0
+                      $ zipWith3 (\x y -> (x*y*))
+                            (towerList (f (liftOne x)))
+                            recipFactorials
+                            (powers dx)
+    where
+      powers x		= iterate (*x) 1
+      recipFactorials	= snd $ mapAccumL (\a i -> (a/fromIntegral i, a)) 1 [1..]
+
+
+-- Lift a numeric function from a base numeric type to a function over
+-- derivative towers.  Takes the primal function and the derivative
+-- function as arguments.  In the binary case, the derivative function
+-- returns the Jacobian, representated as a pair.
+
+liftA1 :: Num a =>
+         (a -> a)
+             -> (Dual tag a -> Dual tag a)
+             -> Dual tag a -> Dual tag a
+
+liftA1 f = (liftA1_ f) . const
+
+liftA2 :: Num a =>
+         (a -> a -> a)
+             -> (Dual tag a -> Dual tag a -> (Dual tag a, Dual tag a))
+             -> Dual tag a -> Dual tag a -> Dual tag a
+
+liftA2 f = (liftA2_ f) . const
+
+-- These are like liftA and liftA2, except they take an extra argument
+-- to df which is the numeric output, allowing easy recursion/reuse.
+
+liftA1_ :: Num a =>
+         (a -> a)
+             -> (Dual tag a -> Dual tag a -> Dual tag a)
+             -> Dual tag a -> Dual tag a
+
+liftA1_ f df x@(Bundle x0 x')
+    = let z = Bundle z0 z'
+          z0 = f (primal x)
+          z' = tangentTower x * df z x
+      in z
+
+
+liftA2_ :: Num a =>
+         (a -> a -> a)
+             -> (Dual tag a
+                     -> Dual tag a
+                     -> Dual tag a
+                     -> (Dual tag a, Dual tag a))
+             -> Dual tag a -> Dual tag a -> Dual tag a
+
+liftA2_ f df x y
+    = let z = Bundle z0 z'
+          z0 = (f (primal x) (primal y))
+          z' =  tangentTower x * dfdx + tangentTower y * dfdy
+          (dfdx, dfdy) = df z x y
+      in z
+
+-- Lift functions which return values in discrete domains.
+
+liftA1disc :: Num a => (a -> c) -> Dual tag a -> c
+liftA2disc :: (Num a, Num b) => (a -> b -> c) -> Dual tag a -> Dual tag b -> c
+
+liftA1disc f x = f (primal x)
+liftA2disc f x y = f (primal x) (primal y)
+
+-- Lift linear functions.
+-- Note: the restriction to linear function is not enforced by the type system.
+
+liftLin :: (a -> b) -> Dual tag a -> Dual tag b
+liftLin f Zero = Zero
+liftLin f (Bundle x x') = Bundle (f x) (liftLin f x')
+
+-- Numeric operations on derivative towers.
+
+instance Num a => Num (Dual tag a) where
+    Zero + y	= y
+    x + Zero	= x
+    (Bundle x0 x') + (Bundle y0 y') = Bundle (x0 + y0) (x' + y')
+    x - Zero	= x
+    Zero - x	= negate x
+    (Bundle x0 x') - (Bundle y0 y') = Bundle (x0 - y0) (x' - y')
+    (*) Zero _	= Zero
+    (*) _ Zero	= Zero
+    (*) x y	= liftA2 (*) (flip (,)) x y
+    negate	= liftLin negate
+    abs Zero	= abs (Bundle 0 Zero)
+    abs (Bundle 0 _) = Bundle 0 (error "not differentiable: abs(0)")
+    abs (Bundle x x') = let s  = signum x
+                            s' = signum x'
+                        in Bundle (abs x)
+                                   (if (s == 1 || s == (-1))
+                                           && (s' == 1 || s' == (-1))
+                                    then (x' * (lift s))
+                                    else error "not differentiable: abs(complex)")
+    signum Zero = signum (Bundle 0 Zero)
+    signum (Bundle x0@0 _) = Bundle x0 (error "not differentiable: signum(0)")
+    signum (Bundle x x')   = let s  = signum x
+                                 s' = signum x'
+                             in Bundle s
+                                (if (s == 1 || s == (-1))
+                                        && (s' == 1 || s' == (-1))
+                                 then 0
+                                 else error "not differentiable: signum(complex)")
+    fromInteger	= lift . fromInteger
+
+-- Here is another problem with supporting complex numbers.  This is a
+-- show stopper for doing transparent forward AD on functions that are
+-- explicitly over complex numbers.
 
 -- The following will not work:
 
@@ -173,29 +291,33 @@ instance Num a => Num (Dual tag a) where
 -- API as non-complex functions.
 
 instance Fractional a => Fractional (Dual tag a) where
-    recip (Bundle x x')           = Bundle z (- x' * z * z) where z = recip x
-    fromRational x                = lift (fromRational x)
+    recip		= liftA1_ recip (const . negate . (^2))
+    fromRational	= lift . fromRational
 
 instance Floating a => Floating (Dual tag a) where
-    pi                  = lift pi
-    exp   (Bundle x x') = Bundle z         (x' * z) where  z = exp x
-    sqrt  (Bundle x x') = Bundle z         (x' / (2 * z)) where z = sqrt x
-    log   (Bundle x x') = Bundle (log x)   (x' / x)
-    (Bundle x x') ** (Bundle y y')
-                        = Bundle z         (x' * y * z / x + y' * z * log x)
-                          where z = x ** y
-    sin   (Bundle x x') = Bundle (sin x)   ( x' * cos x)
-    cos   (Bundle x x') = Bundle (cos x)   (-x' * sin x)
-    asin  (Bundle x x') = Bundle (asin x)  ( x' / sqrt (1 - x^2))
-    acos  (Bundle x x') = Bundle (acos x)  (-x' / sqrt (1 - x^2))
-    atan  (Bundle x x') = Bundle (atan x)  (x' / (1 + x^2))
-    sinh  (Bundle x x') = Bundle (sinh x)  (x' * cosh x)
-    cosh  (Bundle x x') = Bundle (cosh x)  (x' * sinh x)
-    asinh (Bundle x x') = Bundle (asinh x) (x' / sqrt (x^2 + 1))
-    acosh (Bundle x x') = Bundle (acosh x) (x' / sqrt (x^2 - 1))
-    atanh (Bundle x x') = Bundle (atanh x) (x' / (1 - x^2))
+    pi		= lift pi
+    exp		= liftA1_ exp (const . id)
+    sqrt	= liftA1_ sqrt (const . recip . (2*))
+    log		= liftA1 log recip
+    -- Bug on zero base, e.g., (0**2), since derivative is fine but
+    -- can get division by 0 and log 0, oops.  Need special cases, ick.
+    -- Here are some untested ideas:
+    --  (**) x Zero = 1
+    --  (**) x y@(Bundle y0 Zero) = liftA1 (**y0) ((y*) . (**(y-1))) x
+    (**)	= liftA2_ (**) (\z x y -> (y*z/x, z*log x))
+    sin		= liftA1 sin cos
+    cos		= liftA1 cos (negate . sin)
+    asin	= liftA1 asin (recip . sqrt . (1-) . (^2))
+    acos	= liftA1 acos (negate . recip . sqrt . (1-) . (^2))
+    atan	= liftA1 atan (recip . (1+) . (^2))
+    sinh	= liftA1 sinh cosh
+    cosh	= liftA1 cosh sinh
+    asinh	= liftA1 asinh (recip . sqrt . (1+) . (^2))
+    acosh	= liftA1 acosh (recip . sqrt . (-1+) . (^2))
+    atanh	= liftA1 atanh (recip . (1-) . (^2))
 
--- This is mainly to get atan2 to work, which is by inheritance.
+-- The RealFloat instance which follows is mainly to get atan2 to
+-- work, which is by inheritance.
 
 -- Note that atan2 is important in numeric code: to a first
 -- approximation, no program should ever use atan, but always atan2
@@ -212,70 +334,69 @@ instance Floating a => Floating (Dual tag a) where
 
  *Fad> let shouldBeOne a = diff (\a->atan2 (sin a) (cos a)) a
 
- *Fad> shouldBeOne (pi/2-1e12)
+ *Fad> shouldBeOne (pi/2-1e-12)
  1.0
 
  *Fad> shouldBeOne (pi/2)
  1.0
 
- *Fad> shouldBeOne (pi/2+1e12)
+ *Fad> shouldBeOne (pi/2+1e-12)
  1.0
 
- *Fad> diff shouldBeOne (pi/2-1e12)
+ *Fad> diff shouldBeOne (pi/2-1e-12)
  0.0
 
  *Fad> diff shouldBeOne (pi/2)
  -4.0                          -- <<<<<<<<<<<<<<<< BUG IS HERE
 
- *Fad> diff shouldBeOne (pi/2+1e12)
+ *Fad> diff shouldBeOne (pi/2+1e-12)
  0.0
 
 -}
 
 instance (RealFloat a, RealFrac a) => RealFloat (Dual tag a) where
-    floatRadix  (Bundle x x')    = floatRadix x
-    floatDigits (Bundle x x')    = floatDigits x
-    floatRange  (Bundle x x')    = floatRange x
-    decodeFloat (Bundle x x')    = decodeFloat x
-    encodeFloat n i              = Bundle (encodeFloat n i)
-                                   (error "not differentiable: encodeFloat")
-    scaleFloat   i (Bundle x x') = Bundle z (x' * z / x)
-        where z = scaleFloat i x
-    isNaN          (Bundle x x') = isNaN x
-    isInfinite     (Bundle x x') = isInfinite x
-    isDenormalized (Bundle x x') = isDenormalized x
-    isNegativeZero (Bundle x x') = isNegativeZero x
-    isIEEE         (Bundle x x') = isIEEE x
-    atan2 (Bundle y y') (Bundle x x')
-                                 = Bundle (atan2 y x) ((y'*x-x'*y)/(x^2+y^2))
+    floatRadix		= liftA1disc floatRadix
+    floatDigits		= liftA1disc floatDigits
+    floatRange	 	= liftA1disc floatRange
+    decodeFloat		= liftA1disc decodeFloat
+    encodeFloat n i	= Bundle (encodeFloat n i)
+                          (error "not differentiable: encodeFloat")
+    scaleFloat i	= liftA1_ (scaleFloat i) (/)
+    isNaN		= liftA1disc isNaN
+    isInfinite		= liftA1disc isInfinite
+    isDenormalized	= liftA1disc isDenormalized
+    isNegativeZero	= liftA1disc isNegativeZero
+    isIEEE		= liftA1disc isIEEE
+    atan2		= liftA2 atan2 (\x y->let r = recip (x^2+y^2) in (y*r, -x*r))
 
 instance RealFrac a => RealFrac (Dual tag a) where
     properFraction (Bundle x x') = (z1, (Bundle z2 x'))
         where (z1,z2) = properFraction x
-    truncate       (Bundle x x') = truncate x
-    round          (Bundle x x') = round x
-    ceiling        (Bundle x x') = ceiling x
-    floor          (Bundle x x') = floor x
+    truncate	= liftA1disc truncate
+    round	= liftA1disc round
+    ceiling	= liftA1disc ceiling
+    floor	= liftA1disc floor
 
 instance Real a => Real (Dual tag a) where
-    toRational (Bundle x x') = toRational x
+    toRational	= liftA1disc toRational
 
-instance Eq a => Eq (Dual tag a) where
-    (Bundle x x') == (Bundle y y')  =  x == y
+instance (Eq a, Num a) => Eq (Dual tag a) where
+    (==)	= liftA2disc (==)
 
-instance Ord a => Ord (Dual tag a) where
-    (Bundle x x') `compare` (Bundle y y')  =  x `compare` y
+instance (Ord a, Num a) => Ord (Dual tag a) where
+    compare	= liftA2disc compare
 
 instance (Enum a, Num a) => Enum (Dual tag a) where
-    succ     (Bundle x x') = Bundle (succ x) x'
-    pred     (Bundle x x') = Bundle (pred x) x'
-    fromEnum (Bundle x x') = fromEnum x
-    toEnum                 = lift . toEnum
+    succ	= liftA1 succ (const 1)
+    pred	= liftA1 pred (const 1)
+    fromEnum	= liftA1disc fromEnum
+    toEnum	= lift . toEnum
 
--- Differentiation operators.  These have two-letter suffices for the
--- arity of the input and output of the passed functions: U for
--- univariate, meaning a number, M for multivariate, meaning a list of
--- numbers.
+-- First-Order Differentiation Operators
+
+-- These have two-letter suffices for the arity of the input and
+-- output of the passed functions: U for univariate, meaning a number,
+-- M for multivariate, meaning a list of numbers.
 
 -- Perhaps these should be named things like
 --   AD.Forward.D.uu
@@ -289,77 +410,72 @@ instance (Enum a, Num a) => Enum (Dual tag a) where
 -- of arbitrary shape, which includes lists as a special case, on
 -- output.
 
-diffUU :: Num a => (forall tag. Dual tag a -> Dual tag b) -> a -> b
+diffUU :: (Num a, Num b) => (forall tag. Dual tag a -> Dual tag b) -> a -> b
 diffUU f = tangent . f . flip Bundle 1
 
-diffUF :: (Num a, Functor f) =>
+diffUF :: (Num a, Num b, Functor f) =>
           (forall tag. Dual tag a -> f (Dual tag b)) -> a -> f b
 diffUF f = fmap tangent . f . flip Bundle 1
 
-diffMU :: Num a =>
+diffMU :: (Num a, Num b) =>
           (forall tag. [Dual tag a] -> Dual tag b) -> [a] -> [a] -> b
 diffMU f xs = tangent . f . zipWithBundle xs
 
-diffMF :: (Num a, Functor f) =>
+diffMF :: (Num a, Num b, Functor f) =>
           (forall tag. [Dual tag a] -> f (Dual tag b)) -> [a] -> [a] -> f b
 diffMF f xs = fmap tangent . f . zipWithBundle xs
 
 -- value and derivative as a pair, for all combos uni/multi in/out
 
-diffUU2 :: Num a => (forall tag. Dual tag a -> Dual tag b) -> a -> (b,b)
+diffUU2 :: (Num a, Num b) => (forall tag. Dual tag a -> Dual tag b) -> a -> (b,b)
 diffUU2 f = dual2pair . f . flip Bundle 1
 
-diffUF2 :: (Functor f, Num a) =>
+diffUF2 :: (Functor f, Num a, Num b) =>
            (forall tag. Dual tag a -> f (Dual tag b)) -> a -> (f b, f b)
 diffUF2 f = fduals2pair . f . flip Bundle 1
 
-diffMU2 :: (forall tag. [Dual tag a] -> Dual tag b) -> [a] -> [a] -> (b,b)
+diffMU2 :: (Num a, Num b) =>
+           (forall tag. [Dual tag a] -> Dual tag b) -> [a] -> [a] -> (b,b)
 diffMU2 f xs = dual2pair . f . zipWithBundle xs
 
-diffMF2 :: Functor f =>
+diffMF2 :: (Functor f, Num a, Num b) =>
            (forall tag. [Dual tag a] -> f (Dual tag b))
                -> [a] -> [a] -> (f b, f b)
 diffMF2 f xs = fduals2pair . f . zipWithBundle xs
 
 -- Common access patterns
 
-diff :: Num a => (forall tag. Dual tag a -> Dual tag b) -> a -> b
+diff :: (Num a, Num b) => (forall tag. Dual tag a -> Dual tag b) -> a -> b
 diff = diffUU
 
-grad :: Num a => (forall tag. [Dual tag a] -> Dual tag b) -> [a] -> [b]
+grad :: (Num a, Num b) => (forall tag. [Dual tag a] -> Dual tag b) -> [a] -> [b]
 -- grad f = head . jacobian ((:[]) . f) -- Robot face, robot claw!
 grad f xs = map (diffMU f xs) (identity xs)
 
-jacobian :: Num a =>
+jacobian :: (Num a, Num b) =>
             (forall tag. [Dual tag a] -> [Dual tag b]) -> [a] -> [[b]]
 jacobian f xs = transpose $ map (diffMF f xs) (identity xs)
 
 -- Utility functions for shared code in above
 
-tangent :: Dual tag a -> a
-tangent (Bundle _ x') = x'
-
-ftangent :: Functor f => f (Dual tag a) -> f a
+ftangent :: (Functor f, Num a) => f (Dual tag a) -> f a
 ftangent = fmap tangent
 
-primal :: Dual tag a -> a
-primal (Bundle x _) = x
-
-fprimal :: Functor f => f (Dual tag a) -> f a
+fprimal :: (Functor f, Num a) => f (Dual tag a) -> f a
 fprimal = fmap primal
 
 flift :: (Functor f, Num a) => f a -> f (Dual tag a)
 flift = fmap lift
 
-dual2pair :: Dual tag a -> (a,a)
-dual2pair (Bundle x x') = (x, x')
+dual2pair :: Num a => Dual tag a -> (a,a)
+dual2pair x = (primal x, tangent x)
 
-fduals2pair :: Functor f => f (Dual tag a) -> (f a, f a)
+fduals2pair :: (Functor f, Num a) => f (Dual tag a) -> (f a, f a)
 fduals2pair fxs = (fprimal fxs, ftangent fxs)
 
-zipWithBundle :: [a] -> [a] -> [Dual tag a]
+zipWithBundle :: Num a => [a] -> [a] -> [Dual tag a]
 zipWithBundle [] [] = []
-zipWithBundle (x:xs) (y:ys) = (Bundle x y):(zipWithBundle xs ys)
+zipWithBundle (x:xs) (y:ys) = (Bundle x (lift y)):(zipWithBundle xs ys)
 zipWithBundle _ _ = error "zipWithBundle arguments, lengths differ"
 
 -- Lower a function over duals to a function over primals.
