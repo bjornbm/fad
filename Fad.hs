@@ -133,8 +133,8 @@ data Dual tag a = Bundle a (Dual tag a) | Zero deriving Show
 lift :: Num a => a -> Dual tag a
 lift = flip Bundle Zero
 
-liftOne :: Num a => a -> Dual tag a
-liftOne = flip Bundle (lift 1)
+apply :: Num a => (Dual tag a -> b) -> a -> b
+apply = flip (.) (flip Bundle 1)
 
 towerElt :: Num a => Int -> Dual tag a -> a
 towerElt 0 (Bundle x0 _) = x0
@@ -161,12 +161,12 @@ tangentTower (Bundle x0 x') = x'
 
 -- Evaluate function using an i-th order Taylor series
 
-taylor :: Fractional a => (Dual tag a -> Dual tag a) -> a -> a -> [a]
+taylor :: Fractional a => (forall tag. Dual tag a -> Dual tag a) -> a -> a -> [a]
 
 taylor f x dx = snd
                 $ mapAccumL (\a t -> (a+t,a)) 0
                       $ zipWith3 (\x y -> (x*y*))
-                            (towerList (f (liftOne x)))
+                            (towerList (apply f x))
                             recipFactorials
                             (powers dx)
     where
@@ -410,19 +410,19 @@ instance (Enum a, Num a) => Enum (Dual tag a) where
 -- output.
 
 diff' :: (Num a, Num b) => (forall tag. Dual tag a -> Dual tag b) -> a -> (b, b)
-diff' f = dual2pair . f . liftOne
+diff' f = dual2pair . apply f
 -- diff' f x = (y, y') where Bundle y y' = f (Bundle x 1)
 
 diffUU :: (Num a, Num b) => (forall tag. Dual tag a -> Dual tag b) -> a -> b
-diffUU f = tangent . f . liftOne
+diffUU f = tangent . apply f
 
 diffUF :: (Num a, Num b, Functor f) =>
           (forall tag. Dual tag a -> f (Dual tag b)) -> a -> f b
-diffUF f = fmap tangent . f . liftOne
+diffUF f = fmap tangent . apply f
 
 diffUF' :: (Num a, Num b, Functor f) =>
            (forall tag. Dual tag a -> f (Dual tag b)) -> a -> (f b, f b)
-diffUF' f x = (fprimal y, ftangent y) where y = f (liftOne x)
+diffUF' f x = (fprimal y, ftangent y) where y = apply f x
 
 diffMU :: (Num a, Num b) =>
           (forall tag. [Dual tag a] -> Dual tag b) -> [a] -> [a] -> b
