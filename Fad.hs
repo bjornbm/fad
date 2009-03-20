@@ -1,14 +1,15 @@
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# OPTIONS -fglasgow-exts #-}
 
 -- Forward Automatic Differentiation
-module Fad (diffUU, diffUF, diffMU, diffMF,
+module Fad (lift, Dual,
+            diffUU, diffUF, diffUF', diffMU, diffMF,
             diffUU2, diffUF2, diffMU2, diffMF2,
-            diff, grad, jacobian,
-            zeroNewton, inverseNewton, fixedPointNewton, extremumNewton
-)
+            diff, diff', grad, jacobian,
+            zeroNewton, inverseNewton, fixedPointNewton, extremumNewton)
 where
 
-import List(transpose, mapAccumL)
+import Data.List (transpose, mapAccumL)
 
 -- Forward Automatic Differentiation via overloading to perform
 -- nonstandard interpretation that replaces original numeric type with
@@ -92,8 +93,6 @@ import List(transpose, mapAccumL)
 
 --  type signature of diff stuff contaminates diff-using stuff, ick
 
-
--- Misc Implementation Notes
 
 -- Some care has been taken to ensure that correct interoperation with
 -- complex numbers.  Particular care must be taken with the
@@ -410,12 +409,20 @@ instance (Enum a, Num a) => Enum (Dual tag a) where
 -- of arbitrary shape, which includes lists as a special case, on
 -- output.
 
+diff' :: (Num a, Num b) => (forall tag. Dual tag a -> Dual tag b) -> a -> (b, b)
+diff' f = dual2pair . f . liftOne
+-- diff' f x = (y, y') where Bundle y y' = f (Bundle x 1)
+
 diffUU :: (Num a, Num b) => (forall tag. Dual tag a -> Dual tag b) -> a -> b
-diffUU f = tangent . f . flip Bundle 1
+diffUU f = tangent . f . liftOne
 
 diffUF :: (Num a, Num b, Functor f) =>
           (forall tag. Dual tag a -> f (Dual tag b)) -> a -> f b
-diffUF f = fmap tangent . f . flip Bundle 1
+diffUF f = fmap tangent . f . liftOne
+
+diffUF' :: (Num a, Num b, Functor f) =>
+           (forall tag. Dual tag a -> f (Dual tag b)) -> a -> (f b, f b)
+diffUF' f x = (fprimal y, ftangent y) where y = f (liftOne x)
 
 diffMU :: (Num a, Num b) =>
           (forall tag. [Dual tag a] -> Dual tag b) -> [a] -> [a] -> b
