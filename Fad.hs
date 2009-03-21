@@ -164,14 +164,15 @@ tangentTower (Bundle x0 x') = x'
 taylor :: Fractional a => (forall tag. Dual tag a -> Dual tag a) -> a -> a -> [a]
 
 taylor f x dx = snd
-                $ mapAccumL (\a t -> (a+t,a)) 0
-                      $ zipWith3 (\x y -> (x*y*))
-                            (towerList (apply f x))
+                $ mapAccumL (\a x -> app2 (,) $ a+x) 0
+                      $ zipWith3 (\x y z -> x*y*z)
+                            (towerList $ apply f x)
                             recipFactorials
                             (powers dx)
     where
       powers x		= iterate (*x) 1
       recipFactorials	= snd $ mapAccumL (\a i -> (a/fromIntegral i, a)) 1 [1..]
+      app2 f x		= f x x
 
 
 -- Lift a numeric function from a base numeric type to a function over
