@@ -7,6 +7,7 @@ module Fad (lift, Dual,
             diffUU2, diffUF2, diffMU2, diffMF2,
             diff, diff2, grad, jacobian,
             zeroNewton, inverseNewton, fixedPointNewton, extremumNewton,
+            argminNaiveGradient,
             taylor)
 where
 
@@ -232,7 +233,7 @@ liftA2 :: Num a =>
 
 liftA2 f = (liftA2_ f) . const
 
--- | The 'liftA1_ funciton lifts a scalar numeric function, like
+-- | The 'liftA1_' funciton lifts a scalar numeric function, like
 -- 'liftA1', except the the derivative function is given access to the
 -- output value.  This eases recursion and reuse.
 --
@@ -248,11 +249,11 @@ liftA1_ f df x@(Bundle x0 x')
           z' = tangentTower x * df z x
       in z
 
--- | The 'liftA2_ funciton lifts a binary numeric function, like
+-- | The 'liftA2_' funciton lifts a binary numeric function, like
 -- 'liftA2', except the the derivative function is given access to the
 -- output value.  This eases recursion and reuse.
 --
--- EXAMPLE: @liftA2_ (**) (\z x y -> (y*z/x, z*log x))@
+-- EXAMPLE: @liftA2_ (**) (\z x y -> (y*z\/x, z*log x))@
 liftA2_ :: Num a =>
          (a -> a -> a)
              -> (Dual tag a
@@ -640,8 +641,8 @@ extremumNewton f x0 = zeroNewton (diffUU f) x0
 
 -- | The 'argminNaiveGradient' function performs a multivariate
 -- optimization, based on the naive-gradient-descent in the file
--- @stalingrad/examples/flow-tests/pre-saddle-1a.vlad@ from the VLAD
--- compiler Stalingrad sources.  Its output is a stream of
+-- @stalingrad\/examples\/flow-tests\/pre-saddle-1a.vlad@ from the
+-- VLAD compiler Stalingrad sources.  Its output is a stream of
 -- increasingly accurate results.  (Modulo the usual caveats.)  The
 -- gradient is calculated using Forward AD, which is O(n) inefficient
 -- as compared to Reverse AD, where n is the input dimensionality.
