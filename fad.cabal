@@ -9,7 +9,7 @@ Synopsis:            Forward Automatic Differentiation.
 Description:
     Forward Automatic Differentiation via overloading to perform
     nonstandard interpretation that replaces original numeric type with
-    corresponding dual number type.
+    corresponding generalized dual number type.
     Existential type \"branding\" is used to prevent perturbation confusion.
 Category:            Math
 Build-Type:          Simple
