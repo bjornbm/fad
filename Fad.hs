@@ -133,7 +133,7 @@ import Data.List (transpose, mapAccumL)
 -- derivatives.  These generalize the Dual numbers of Clifford (1873),
 -- which hold only a first derivative.  They can be converted to
 -- formal power series via division by the sequence of factorials.
-data Dual tag a = Bundle a (Dual tag a) | Zero deriving Show
+data Dual tag a = Tower [a] deriving Show
 
 -- Injectors and accessors for derivative towers
 
@@ -141,33 +141,46 @@ data Dual tag a = Bundle a (Dual tag a) | Zero deriving Show
 -- dual numbers, with a zero tower.  If dual numbers were a monad,
 -- 'lift' would be 'return'.
 lift :: Num a => a -> Dual tag a
-lift = flip Bundle Zero
+lift = flip bundle zero
+
+-- | The 'bundle' function takes a primal number and a dual number
+-- tower and returns a dual number tower with the given tower shifted
+-- up one and the new primal inserted.
+--
+-- Property: @x = bundle (primal x) (tangentTower x)@
+bundle :: Num a => a -> Dual tag a -> Dual tag a
+bundle x0 x' = Tower (x0:towerList x')
+-- The following forces its second argument's structure, which is very bad:
+-- bundle x0 (Tower xs) = Tower (x0:xs)
+
+-- | The zero element of a Dual Number tower algebra
+zero :: Num a => Dual tag a
+zero = Tower []
 
 -- | The 'apply' function applies a function to a number lifted from
 -- the primal domain to the dual number domain, with derivative 1,
 -- thus calculating the generalized push-forward, in the differential
 -- geometric sense, of the given function at the given point.
 apply :: Num a => (Dual tag a -> b) -> a -> b
-apply = (. flip Bundle 1)
+apply = (. flip bundle 1)
 
 -- | The 'towerElt' function finds the i-th element of a dual number
 -- | tower, where the 0-th element is the primal value, the 1-st
 -- | element is the first derivative, etc.
 towerElt :: Num a => Int -> Dual tag a -> a
-towerElt 0 (Bundle x0 _) = x0
-towerElt i (Bundle _ x') = if i<0
-                           then error "negative index"
-                           else towerElt (i-1) x'
-towerElt i Zero = if i<0
-                  then error "negative index"
-                  else 0
+towerElt i (Tower xs) = xs !!! i
+
+[] !!! i = if i<0
+           then error "negative index"
+           else 0
+(x0:xs) !!! 0 = x0
+(x0:xs) !!! i = xs !!! (i-1)
 
 -- | The 'towerList' function converts a dual number tower to a list
 -- of values with the i-th derivatives, i=0,1,..., possibly truncated
 -- when all remaining values in the tower are zero.
 towerList :: Dual tag a -> [a]
-towerList Zero = []
-towerList (Bundle x0 x') = x0:towerList x'
+towerList (Tower xs) = xs
 
 -- | The 'primal' function finds the primal value from a dual number
 -- | tower.  The inverse of 'lift'.
@@ -184,27 +197,8 @@ tangent = towerElt 1
 -- This is equivalent, in an appropriate sense, to taking the first
 -- derivative.
 tangentTower :: Num a => Dual tag a -> Dual tag a
-tangentTower Zero = Zero
-tangentTower (Bundle x0 x') = x'
-
--- | The 'taylor' function evaluate a Taylor series of the given
--- function around the given point with the given delta.  It returns a
--- list of increasingly higher-order approximations.
---
--- EXAMPLE: @taylor exp 0 1@
-taylor :: Fractional a => (forall tag. Dual tag a -> Dual tag a) -> a -> a -> [a]
-
-taylor f x dx = snd
-                $ mapAccumL (\a x -> app2 (,) $ a+x) 0
-                      $ zipWith3 (\x y z -> x*y*z)
-                            (towerList $ apply f x)
-                            recipFactorials
-                            (powers dx)
-    where
-      powers x		= iterate (*x) 1
-      recipFactorials	= snd $ mapAccumL (\a i -> (a/fromIntegral i, a)) 1 [1..]
-      app2 f x		= f x x
-
+tangentTower (Tower []) = zero
+tangentTower (Tower (_ : x')) = Tower x'
 
 -- | The 'liftA1' function lifts a scalar numeric function from a base
 -- numeric type to a function over derivative towers.  Takes the
@@ -243,11 +237,8 @@ liftA1_ :: Num a =>
              -> (Dual tag a -> Dual tag a -> Dual tag a)
              -> Dual tag a -> Dual tag a
 
-liftA1_ f df x@(Bundle x0 x')
-    = let z = Bundle z0 z'
-          z0 = f (primal x)
-          z' = tangentTower x * df z x
-      in z
+liftA1_ f df x = z
+    where z = bundle (f (primal x)) (tangentTower x * df z x)
 
 -- | The 'liftA2_' funciton lifts a binary numeric function, like
 -- 'liftA2', except the the derivative function is given access to the
@@ -262,12 +253,11 @@ liftA2_ :: Num a =>
                      -> (Dual tag a, Dual tag a))
              -> Dual tag a -> Dual tag a -> Dual tag a
 
-liftA2_ f df x y
-    = let z = Bundle z0 z'
-          z0 = (f (primal x) (primal y))
-          z' =  tangentTower x * dfdx + tangentTower y * dfdy
+liftA2_ f df x y = z
+    where z = bundle z0 z'
+          z0 = f (primal x) (primal y)
+          z' = tangentTower x * dfdx + tangentTower y * dfdy
           (dfdx, dfdy) = df z x y
-      in z
 
 -- | The 'liftA1disc' function lifts a scalar function with numeric
 -- input and discrete output from into the derivative tower domain.
@@ -283,40 +273,46 @@ liftA2disc f x y = f (primal x) (primal y)
 -- primal domain into the derivative tower domain.  WARNING: the
 -- restriction to linear functions is not enforced by the type system.
 liftLin :: (a -> b) -> Dual tag a -> Dual tag b
-liftLin f Zero = Zero
-liftLin f (Bundle x x') = Bundle (f x) (liftLin f x')
+liftLin f = Tower . map f . towerList
 
 -- Numeric operations on derivative towers.
 
 instance Num a => Num (Dual tag a) where
-    Zero + y	= y
-    x + Zero	= x
-    (Bundle x0 x') + (Bundle y0 y') = Bundle (x0 + y0) (x' + y')
-    x - Zero	= x
-    Zero - x	= negate x
-    (Bundle x0 x') - (Bundle y0 y') = Bundle (x0 - y0) (x' - y')
-    (*) Zero _	= Zero
-    (*) _ Zero	= Zero
-    (*) x y	= liftA2 (*) (flip (,)) x y
+    (Tower []) + y	= y
+    x + (Tower [])	= x
+    x + y = bundle (primal x + primal y) (tangentTower x + tangentTower y)
+    x - (Tower [])	= x
+    (Tower []) - x	= negate x
+    x - y = bundle (primal x - primal y) (tangentTower x - tangentTower y)
+    (Tower []) * _	= zero
+    _ * (Tower [])	= zero
+    x * y	= liftA2 (*) (flip (,)) x y
     negate	= liftLin negate
-    abs Zero	= abs (Bundle 0 Zero)
-    abs (Bundle 0 _) = Bundle 0 (error "not differentiable: abs(0)")
-    abs (Bundle x x') = let s  = signum x
-                            s' = signum x'
-                        in Bundle (abs x)
-                                   (if (s == 1 || s == (-1))
-                                           && (s' == 1 || s' == (-1))
-                                    then (x' * (lift s))
-                                    else error "not differentiable: abs(complex)")
-    signum Zero = signum (Bundle 0 Zero)
-    signum (Bundle x0@0 _) = Bundle x0 (error "not differentiable: signum(0)")
-    signum (Bundle x x')   = let s  = signum x
-                                 s' = signum x'
-                             in Bundle s
-                                (if (s == 1 || s == (-1))
-                                        && (s' == 1 || s' == (-1))
-                                 then 0
-                                 else error "not differentiable: signum(complex)")
+    abs (Tower [])	= abs 0
+    abs x = let x0 = primal x
+                x' = tangentTower x
+                s  = signum x0
+                s' = signum x'
+            in bundle
+                   (abs x0)
+                   (if x0==0
+                    then error "not differentiable: abs(0)"
+                    else if (s == 1 || s == (-1))
+                               && (s' == 1 || s' == (-1))
+                         then x' * lift s
+                         else error "not differentiable: abs(complex)")
+    signum (Tower []) = signum 0
+    signum x = let x0 = primal x
+                   x' = tangentTower x
+                   s  = signum x0
+                   s' = signum x'
+               in bundle s
+                  (if x0==0
+                   then error "not differentiable: signum(0)"
+                   else if (s == 1 || s == (-1))
+                            && (s' == 1 || s' == (-1))
+                        then zero
+                        else error "not differentiable: signum(complex)")
     fromInteger	= lift . fromInteger
 
 -- Here is another problem with supporting complex numbers.  This is a
@@ -326,16 +322,16 @@ instance Num a => Num (Dual tag a) where
 -- The following will not work:
 
 -- instance Complex a => Complex (Dual tag a) where
---     realPart  (Bundle x x') = Bundle (realPart x)  (realPart x')
---     imagPart  (Bundle x x') = Bundle (imagPart x)  (imagPart x')
---     conjugate (Bundle x x') = Bundle (conjugate x) (conjugate x')
+--     realPart   = liftLin realPart
+--     imagPart   = liftLin imagPart
+--     conjugate  = liftLin conjugate
 --     ...
 
 -- This fails because Complex in the standard prelude is not abstract
 -- enough.  It is impossible to make (Dual (Complex a)) a complex
 -- number; the system can only do (Complex (Dual a)).  This makes it
--- impossible to take derivatives of complex functions using the same
--- API as non-complex functions.
+-- impossible to take derivatives of complex functions, i.e., analytic
+-- functions, using the same API as non-complex functions.
 
 instance Fractional a => Fractional (Dual tag a) where
     recip		= liftA1_ recip (const . negate . (^2))
@@ -349,8 +345,8 @@ instance Floating a => Floating (Dual tag a) where
     -- Bug on zero base, e.g., (0**2), since derivative is fine but
     -- can get division by 0 and log 0, oops.  Need special cases, ick.
     -- Here are some untested ideas:
-    --  (**) x Zero = 1
-    --  (**) x y@(Bundle y0 Zero) = liftA1 (**y0) ((y*) . (**(y-1))) x
+    --  (**) x (Tower []) = 1
+    --  (**) x y@(Tower [y0]) = liftA1 (**y0) ((y*) . (**(y-1))) x
     (**)	= liftA2_ (**) (\z x y -> (y*z/x, z*log x))
     sin		= liftA1 sin cos
     cos		= liftA1 cos (negate . sin)
@@ -406,7 +402,7 @@ instance (RealFloat a, RealFrac a) => RealFloat (Dual tag a) where
     floatDigits		= liftA1disc floatDigits
     floatRange	 	= liftA1disc floatRange
     decodeFloat		= liftA1disc decodeFloat
-    encodeFloat n i	= Bundle (encodeFloat n i)
+    encodeFloat n i	= bundle (encodeFloat n i)
                           (error "not differentiable: encodeFloat")
     scaleFloat i	= liftA1_ (scaleFloat i) (/)
     isNaN		= liftA1disc isNaN
@@ -417,7 +413,7 @@ instance (RealFloat a, RealFrac a) => RealFloat (Dual tag a) where
     atan2		= liftA2 atan2 (\x y->let r = recip (x^2+y^2) in (y*r, -x*r))
 
 instance RealFrac a => RealFrac (Dual tag a) where
-    properFraction x = (z1, (Bundle z2 (tangentTower x)))
+    properFraction x = (z1, (bundle z2 (tangentTower x)))
         where (z1,z2) = properFraction (primal x)
     truncate	= liftA1disc truncate
     round	= liftA1disc round
@@ -548,7 +544,7 @@ fdualsToPair fxs = (fmap primal fxs, fmap tangent fxs)
 -- should be the same length.
 zipWithBundle :: Num a => [a] -> [a] -> [Dual tag a]
 zipWithBundle [] [] = []
-zipWithBundle (x:xs) (y:ys) = (Bundle x (lift y)):(zipWithBundle xs ys)
+zipWithBundle (x:xs) (y:ys) = (bundle x (lift y)):(zipWithBundle xs ys)
 zipWithBundle _ _ = error "zipWithBundle arguments, lengths differ"
 
 -- | The 'lowerUU' function lowers a function over dual numbers to a
@@ -589,6 +585,26 @@ identity xs = map (\i -> map (\j -> if i==j then 1 else 0) js) js
 -- list or list of lists) for convenient examination.
 show2d :: Show a => [a] -> String
 show2d = ("["++) . (++"]\n") . (foldl1 $ (++) . (++"\n ")) . map show
+
+-- Misc Derivative-Using Routines
+
+-- | The 'taylor' function evaluate a Taylor series of the given
+-- function around the given point with the given delta.  It returns a
+-- list of increasingly higher-order approximations.
+--
+-- EXAMPLE: @taylor exp 0 1@
+taylor :: Fractional a => (forall tag. Dual tag a -> Dual tag a) -> a -> a -> [a]
+
+taylor f x dx = snd
+                $ mapAccumL (\a x -> app2 (,) $ a+x) 0
+                      $ zipWith3 (\x y z -> x*y*z)
+                            (towerList $ apply f x)
+                            recipFactorials
+                            (powers dx)
+    where
+      powers x		= iterate (*x) 1
+      recipFactorials	= snd $ mapAccumL (\a i -> (a/fromIntegral i, a)) 1 [1..]
+      app2 f x		= f x x
 
 -- Optimization Routines
 
