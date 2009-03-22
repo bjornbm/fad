@@ -219,7 +219,7 @@ liftA1 f = (liftA1_ f) . const
 -- derivative function should return the Jacobian matrix,
 -- representated as a pair.
 --
--- EXAMPLE: @liftA2 (*) (\x y -> (y,x))@
+-- EXAMPLE: @liftA2 (*) (\\x y -> (y,x))@
 liftA2 :: Num a =>
          (a -> a -> a)
              -> (Dual tag a -> Dual tag a -> (Dual tag a, Dual tag a))
@@ -617,11 +617,11 @@ taylor f x dx = snd
 -- results.  (Modulo the usual caveats.)
 --
 -- TEST CASE:
---  take 10 $ zeroNewton (\x->x^2-4) 1  -- converge to 2.0
+--  @take 10 $ zeroNewton (\\x->x^2-4) 1  -- converge to 2.0@
 --
 -- TEST CASE
 --  :module Complex Fad
---  take 10 $ zeroNewton ((+1).(^2)) (1 :+ 1)  -- converge to (0 +: 1)
+--  @take 10 $ zeroNewton ((+1).(^2)) (1 :+ 1)  -- converge to (0 +: 1)@
 --
 zeroNewton :: Fractional a =>
               (forall tag. Dual tag a -> Dual tag a) -> a -> [a]
@@ -632,7 +632,7 @@ zeroNewton f x0 = iterate (\x -> let (y,y') = diffUU2 f x in x - y/y') x0
 -- results.  (Modulo the usual caveats.)
 --
 -- TEST CASE:
---   take 10 $ inverseNewton sqrt 1 (sqrt 10)  -- converge to 10
+--   @take 10 $ inverseNewton sqrt 1 (sqrt 10)  -- converge to 10@
 --
 inverseNewton :: Fractional a =>
                  (forall tag. Dual tag a -> Dual tag a)
