@@ -14,5 +14,5 @@ Description:
 Category:            Math
 Build-Type:          Simple
 Build-Depends:       base
-Exposed-Modules:     Fad
+Exposed-Modules:     Numeric.Fad
  
