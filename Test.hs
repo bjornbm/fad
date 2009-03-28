@@ -1,4 +1,4 @@
-import Fad
+import Numeric.Fad
 import Data.Complex
 import Test.QuickCheck
 

@@ -2,7 +2,8 @@
 {-# OPTIONS -fglasgow-exts #-}
 
 -- Forward Automatic Differentiation
-module Fad (lift, Dual,
+module Numeric.Fad (
+            lift, Dual,
             diffUU, diffUF, diffMU, diffMF,
             diffUU2, diffUF2, diffMU2, diffMF2,
             diff, diff2, grad, jacobian,
