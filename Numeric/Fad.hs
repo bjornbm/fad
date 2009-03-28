@@ -1,6 +1,15 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# OPTIONS -fglasgow-exts #-}
 
+{- |
+   Copyright  : Copyright (C) 2008-2009 Barak A. Pearlmutter and Jeffrey Mark Siskind
+   License    : BSD3
+
+   Maintainer : bjorn.buckwalter@gmail.com
+   Stability  : experimental
+   Portability: GHC only?
+-}
+
 -- Forward Automatic Differentiation
 module Numeric.Fad (
             lift, Dual,
@@ -17,24 +26,6 @@ import Data.List (transpose, mapAccumL)
 -- Forward Automatic Differentiation via overloading to perform
 -- nonstandard interpretation that replaces original numeric type with
 -- corresponding generalized dual number type.
-
--- License:
-
---  Copyright (C) 2008-2009 Barak A. Pearlmutter & Jeffrey Mark Siskind
---
---  This program is free software; you can redistribute it and/or modify
---  it under the terms of the GNU General Public License as published by
---  the Free Software Foundation; either version 2 of the License, or
---  (at your option) any later version.
---
---  This program is distributed in the hope that it will be useful,
---  but WITHOUT ANY WARRANTY; without even the implied warranty of
---  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
---  GNU General Public License for more details.
---
---  You should have received a copy of the GNU General Public License along
---  with this program; if not, write to the Free Software Foundation, Inc.,
---  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
 -- Credits:
 
