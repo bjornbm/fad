@@ -1,0 +1,72 @@
+   Copyright  : 2008-2009, Barak A. Pearlmutter and Jeffrey Mark Siskind
+   License    : BSD3
+
+   Maintainer : bjorn.buckwalter@gmail.com
+   Stability  : experimental
+   Portability: GHC only?
+
+Forward Automatic Differentiation via overloading to perform
+nonstandard interpretation that replaces original numeric type with
+corresponding generalized dual number type.
+
+Each invocation of the differentiation function introduces a
+distinct perturbation, which requires a distinct dual number type.
+In order to prevent these from being confused, tagging, called
+branding in the Haskell community, is used.  This seems to prevent
+perturbation confusion, although it would be nice to have an actual
+proof of this.  The technique does require adding invocations of
+lift at appropriate places when nesting is present.
+
+For more information on perturbation confusion and the solution
+employed in this library see:
+<http://www.bcl.hamilton.ie/~barak/papers/ifl2005.pdf>
+<http://thread.gmane.org/gmane.comp.lang.haskell.cafe/22308/>
+
+
+Examples
+========
+Define an example function 'f':
+
+> import Numeric.Fad
+> f x = 6 - 5 * x + x ^ 2  -- Our example function
+
+Basic usage of the differentiation operator:
+
+> y   = f 2              -- f(2) = 0
+> y'  = diff f 2         -- First derivative f'(2) = -1
+> y'' = diff (diff f) 2  -- Second derivative f''(2) = 2
+
+Example optimization method; find a zero using Newton's method:
+
+> y_newton1 = zeroNewton f 0   -- converges to first zero at 2.0.
+> y_newton2 = zeroNewton f 10  -- converges to second zero at 3.0.
+
+
+Installation
+============
+To install:
+    cabal install
+
+Or:
+    runhaskell Setup.lhs configure
+    runhaskell Setup.lhs build
+    runhaskell Setup.lhs install
+
+
+Credits
+=======
+Authors: Copyright 2008,
+Barak A. Pearlmutter <barak@cs.nuim.ie> &
+Jeffrey Mark Siskind <qobi@purdue.edu>
+
+Work started as stripped-down version of higher-order tower code
+published by Jerzy Karczmarczuk <jerzy.karczmarczuk@info.unicaen.fr>
+which used a non-standard standard prelude.
+
+Initial perturbation-confusing code is a modified version of
+<http://cdsmith.wordpress.com/2007/11/29/some-playing-with-derivatives/>
+
+Tag trick, called "branding" in the Haskell community, from
+Bjorn Buckwalter <bjorn.buckwalter@gmail.com>
+<http://thread.gmane.org/gmane.comp.lang.haskell.cafe/22308/>
+

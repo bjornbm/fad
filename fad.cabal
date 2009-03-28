@@ -6,6 +6,7 @@ Copyright:           Barak A. Pearlmutter and Jeffrey Mark Siskind 2008-2009
 Author:              Barak A. Pearlmutter and Jeffrey Mark Siskind
 Maintainer:          bjorn.buckwalter@gmail.com
 Stability:           Experimental
+Homepage:            http://github.com/bjornbm/fad
 Synopsis:            Forward Automatic Differentiation.
 Description:
     Forward Automatic Differentiation via overloading to perform
@@ -16,5 +17,5 @@ Category:            Math
 Build-Type:          Simple
 Build-Depends:       base
 Exposed-Modules:     Numeric.Fad
-Extra-source-files:  Test.hs
+Extra-source-files:  README, Test.hs
  
