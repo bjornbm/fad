@@ -289,30 +289,26 @@ instance Num a => Num (Dual tag a) where
     _ * (Tower [])	= zero
     x * y	= liftA2 (*) (flip (,)) x y
     negate	= liftLin negate
-    abs (Tower [])	= abs 0
-    abs x = let x0 = primal x
-                x' = tangentTower x
-                s  = signum x0
-                s' = signum x'
-            in bundle
-                   (abs x0)
-                   (if x0==0
-                    then error "not differentiable: abs(0)"
-                    else if s /= 0 && s' /= 0
-                         then x' * lift s
-                         else error "not differentiable: abs(complex)")
-    signum (Tower []) = signum 0
-    signum x = let x0 = primal x
-                   x' = tangentTower x
-                   s  = signum x0
-                   s' = signum x'
-               in bundle s
-                  (if x0==0
-                   then error "not differentiable: signum(0)"
-                   else if s /= 0 && s' /= 0
-                        then zero
-                        else error "not differentiable: signum(complex)")
+    abs = liftA1 abs
+          (\x->let x0 = primal x
+               in
+                 if x0==0
+                 then error "not differentiable: abs(0)"
+                 else if notComplex x0 -- would be good to verify nonComplex tower
+                      then lift (signum x0)
+                      else error "not differentiable: abs(complex)")
+    signum = liftA1 signum
+             (\x->let x0 = primal x
+                  in
+                    if x0==0
+                    then error "not differentiable: signum(0)"
+                    else if notComplex x0 -- would be good to verify nonComplex tower
+                         then zero
+                         else error "not differentiable: signum(complex)")
     fromInteger	= lift . fromInteger
+
+notComplex x = s == 0 || s == 1 || s == -1
+    where s = signum x
 
 -- Here is another problem with supporting complex numbers.  This is a
 -- show stopper for doing transparent forward AD on functions that are
