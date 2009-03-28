@@ -133,7 +133,7 @@ import Data.List (transpose, mapAccumL)
 -- derivatives.  These generalize the Dual numbers of Clifford (1873),
 -- which hold only a first derivative.  They can be converted to
 -- formal power series via division by the sequence of factorials.
-data Dual tag a = Tower [a] deriving Show
+newtype Dual tag a = Tower [a] deriving Show
 
 -- Injectors and accessors for derivative towers
 
@@ -621,7 +621,7 @@ taylor f x dx = snd
 --
 -- TEST CASE
 --  :module Complex Fad
---  @take 10 $ zeroNewton ((+1).(^2)) (1 :+ 1)  -- converge to (0 +: 1)@
+--  @take 10 $ zeroNewton ((+1).(^2)) (1 :+ 1)  -- converge to (0 :+ 1)@
 --
 zeroNewton :: Fractional a =>
               (forall tag. Dual tag a -> Dual tag a) -> a -> [a]
