@@ -6,6 +6,11 @@ import Test.QuickCheck
 -- HUnit for such tests instead.)
 onceCheck = check (defaultConfig {configMaxTest = 1})
 
+-- | Comparison allowing for inaccuracy (not pretty).
+cmpE :: Double -> Double -> Double -> Bool
+cmpE accuracy x1 x2 = abs (x1 - x2) < accuracy
+(~=) = cmpE 1.0e-10
+
 
 -- Type signatures are supplied when QuickCheck is otherwise unable to
 -- infer the type of the properties arguments. An alternative way of
@@ -27,12 +32,16 @@ prop_diffMF_2 = diffMF id [10..14] [0..4] == [0,1,2,3,4]
 prop_jacobian = jacobian (\xs->[sum xs,product xs,log $ product $ map (sqrt . (^2) . exp) xs]) [1..5] 
              == [[1,1,1,1,1],[120,60,40,30,24],[1,1,1,1,1]]
 
--- @zeroNewton@ test case.
+-- @zeroNewton@ test cases.
 prop_zeroNewton_1 = zeroNewton (\x->x^2-4) 1 !! 10 == 2
 prop_zeroNewton_2 = zeroNewton ((+1).(^2)) (1 :+ 1) !! 10 == 0 :+ 1
 
 -- @inverseNewton@ test case.
 prop_inverseNewton = inverseNewton sqrt 1 (sqrt 10) !! 10 == 10
+
+-- @atan2@ test cases.
+prop_atan2_shouldBeOne :: Double -> Bool
+prop_atan2_shouldBeOne a = diff (\a->atan2 (sin a) (cos a)) a ~= 1
 
 
 -- Test all properties.
@@ -46,4 +55,6 @@ main = do
   onceCheck  prop_zeroNewton_1
   onceCheck  prop_zeroNewton_2
   onceCheck  prop_inverseNewton
+  quickCheck prop_atan2_shouldBeOne
+  onceCheck (prop_atan2_shouldBeOne (pi/2))
 
