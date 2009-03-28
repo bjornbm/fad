@@ -8,41 +8,64 @@
    Maintainer : bjorn.buckwalter@gmail.com
    Stability  : experimental
    Portability: GHC only?
+
+Forward Automatic Differentiation via overloading to perform
+nonstandard interpretation that replaces original numeric type with
+corresponding generalized dual number type.
+
+Credits:
+
+Authors: Copyright 2008,
+Barak A. Pearlmutter (<barak@cs.nuim.ie>) &
+Jeffrey Mark Siskind (<qobi@purdue.edu>)
+
+Work started as stripped-down version of higher-order tower code
+published by Jerzy Karczmarczuk (<jerzy.karczmarczuk@info.unicaen.fr>)
+which used a non-standard standard prelude.
+
+Initial perturbation-confusing code is a modified version of
+<http://cdsmith.wordpress.com/2007/11/29/some-playing-with-derivatives/>
+
+Tag trick, called \"branding\" in the Haskell community, from
+Bj&#246;rn Buckwalter (<bjorn.buckwalter@gmail.com>)
+<http://thread.gmane.org/gmane.comp.lang.haskell.cafe/22308/>
+
+Notes:
+
+Each invocation of the differentiation function introduces a
+distinct perturbation, which requires a distinct dual number type.
+In order to prevent these from being confused, tagging, called
+branding in the Haskell community, is used.  This seems to prevent
+perturbation confusion, although it would be nice to have an actual
+proof of this.  The technique does require adding invocations of
+lift at appropriate places when nesting is present.
+
+The \"pass in a lifter\" approach, discussed in the HOSC paper, was
+rediscovered and implemented by David Roundy (<droundy@darcs.net>)
+<http://thread.gmane.org/gmane.comp.lang.haskell.cafe/22308>
+Unfortunately this would preclude writing in a natural style, and
+is therefore not used here.  It however could be combined with
+tagging to allow dynamic nesting, if the type system would allow.
+
 -}
 
 -- Forward Automatic Differentiation
 module Numeric.Fad (
-            lift, Dual,
+            -- * Higher-Order Dual Numbers
+            Dual, lift, 
+            -- * First-Order Differentiation Operators
             diffUU, diffUF, diffMU, diffMF,
             diffUU2, diffUF2, diffMU2, diffMF2,
+            -- * Common access patterns
             diff, diff2, grad, jacobian,
+            -- * Optimization Routines
             zeroNewton, inverseNewton, fixedPointNewton, extremumNewton,
             argminNaiveGradient,
+            -- * Miscellaneous
             taylor)
 where
 
 import Data.List (transpose, mapAccumL)
-
--- Forward Automatic Differentiation via overloading to perform
--- nonstandard interpretation that replaces original numeric type with
--- corresponding generalized dual number type.
-
--- Credits:
-
---  Authors: Copyright 2008,
---     Barak A. Pearlmutter <barak@cs.nuim.ie> &
---     Jeffrey Mark Siskind <qobi@purdue.edu>
-
---  Work started as stripped-down version of higher-order tower code
---  published by Jerzy Karczmarczuk <jerzy.karczmarczuk@info.unicaen.fr>
---  which used a non-standard standard prelude.
-
---  Initial perturbation-confusing code is a modified version of
---  http://cdsmith.wordpress.com/2007/11/29/some-playing-with-derivatives/
-
---  Tag trick, called "branding" in the Haskell community, from
---  Bj\"orn Buckwalter <bjorn.buckwalter@gmail.com>
---  http://thread.gmane.org/gmane.comp.lang.haskell.cafe/22308/
 
 -- To Do:
 
@@ -53,21 +76,6 @@ import Data.List (transpose, mapAccumL)
 --  Optimize for efficiency
 
 -- Notes:
-
--- Each invocation of the differentiation function introduces a
--- distinct perturbation, which requires a distinct dual number type.
--- In order to prevent these from being confused, tagging, called
--- branding in the Haskell community, is used.  This seems to prevent
--- perturbation confusion, although it would be nice to have an actual
--- proof of this.  The technique does require adding invocations of
--- lift at appropriate places when nesting is present.
-
--- The "pass in a lifter" approach, discussed in the HOSC paper, was
--- rediscovered and implemented by David Roundy <droundy@darcs.net>
--- http://thread.gmane.org/gmane.comp.lang.haskell.cafe/22308
--- Unfortunately this would preclude writing in a natural style, and
--- is therefore not used here.  It however could be combined with
--- tagging to allow dynamic nesting, if the type system would allow.
 
 -- The constructor is "Bundle" because dual numbers are tangent-vector
 -- bundles, in the terminology of differential geometry.  For the same
@@ -119,6 +127,7 @@ import Data.List (transpose, mapAccumL)
 -- we could use signumRecip = conjugate . signum for complex numbers.
 -- Except that conjugate is defined only for complex numbers, which is
 -- strange since it would just be the identity for real numbers.
+
 
 -- | The 'Dual' type is a concrete representation of a higher-order
 -- Dual number, meaning a number augmented with a tower of
