@@ -1,5 +1,5 @@
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# OPTIONS -fglasgow-exts #-}
+{-# LANGUAGE Rank2Types          #-}
 
 {- |
    Copyright  : Copyright (C) 2008-2009 Barak A. Pearlmutter and Jeffrey Mark Siskind
