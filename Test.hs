@@ -7,9 +7,9 @@ import Test.QuickCheck
 onceCheck = check (defaultConfig {configMaxTest = 1})
 
 -- | Comparison allowing for inaccuracy (not pretty).
-cmpE :: Double -> Double -> Double -> Bool
-cmpE accuracy x1 x2 = abs (x1 - x2) < accuracy
-(~=) = cmpE 1.0e-10
+nearby :: Double -> Double -> Double -> Bool
+nearby accuracy x1 x2 = abs (x1 - x2) < accuracy
+(~=) = nearby 1.0e-10
 
 
 -- Type signatures are supplied when QuickCheck is otherwise unable to
@@ -29,7 +29,7 @@ prop_constant_one x y = diffUU (\y -> lift x + y) y == 1
 
 prop_diffMF_1 = diffMF (\xs -> [sum (zipWith (*) xs [1..5])]) [1,1,1,1,1] (map (10^) [0..4]) == [54321]
 prop_diffMF_2 = diffMF id [10..14] [0..4] == [0,1,2,3,4]
-prop_jacobian = jacobian (\xs->[sum xs,product xs,log $ product $ map (sqrt . (^2) . exp) xs]) [1..5] 
+prop_jacobian = jacobian (\xs->[sum xs,product xs,log $ product $ map (sqrt . (^2) . exp) xs]) [1..5]
              == [[1,1,1,1,1],[120,60,40,30,24],[1,1,1,1,1]]
 
 -- @zeroNewton@ test cases.
