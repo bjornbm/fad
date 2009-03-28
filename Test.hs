@@ -57,4 +57,3 @@ main = do
   onceCheck  prop_inverseNewton
   quickCheck prop_atan2_shouldBeOne
   onceCheck (prop_atan2_shouldBeOne (pi/2))
-

@@ -18,4 +18,3 @@ Build-Type:          Simple
 Build-Depends:       base
 Exposed-Modules:     Numeric.Fad
 Extra-source-files:  README, Test.hs
- 
