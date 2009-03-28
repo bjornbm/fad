@@ -297,8 +297,7 @@ instance Num a => Num (Dual tag a) where
                    (abs x0)
                    (if x0==0
                     then error "not differentiable: abs(0)"
-                    else if (s == 1 || s == (-1))
-                               && (s' == 1 || s' == (-1))
+                    else if s /= 0 && s' /= 0
                          then x' * lift s
                          else error "not differentiable: abs(complex)")
     signum (Tower []) = signum 0
@@ -309,8 +308,7 @@ instance Num a => Num (Dual tag a) where
                in bundle s
                   (if x0==0
                    then error "not differentiable: signum(0)"
-                   else if (s == 1 || s == (-1))
-                            && (s' == 1 || s' == (-1))
+                   else if s /= 0 && s' /= 0
                         then zero
                         else error "not differentiable: signum(complex)")
     fromInteger	= lift . fromInteger
