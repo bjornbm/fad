@@ -667,7 +667,7 @@ taylor :: Fractional a => (forall tag. Dual tag a -> Dual tag a) -> a -> a -> [a
 taylor f x dx = snd
                 $ mapAccumL (\a x -> app2 (,) $ a+x) 0
                       $ zipWith3 (\x y z -> x*y*z)
-                            (fromTower $ apply f x)
+                            (diffsUU f x)
                             recipFactorials
                             (powers dx)
     where
