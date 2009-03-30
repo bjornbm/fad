@@ -47,6 +47,10 @@ Basic usage of the differentiation operator:
 > y'  = diff f 2         -- First derivative f'(2) = -1
 > y'' = diff (diff f) 2  -- Second derivative f''(2) = 2
 
+List of derivatives:
+
+> ys = take 3 $ diffs f 2  -- [0, -1, 2]
+
 Example optimization method; find a zero using Newton's method:
 
 > y_newton1 = zeroNewton f 0   -- converges to first zero at 2.0.
