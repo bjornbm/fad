@@ -55,7 +55,7 @@ tagging to allow dynamic nesting, if the type system would allow.
 
 
 -- Forward Automatic Differentiation
-module Numeric.Fad (
+module Numeric.FAD (
             -- * Higher-Order Dual Numbers
             Dual, lift,
             -- * First-Order Differentiation Operators

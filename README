@@ -38,7 +38,7 @@ Examples
 ========
 Define an example function 'f':
 
-> import Numeric.Fad
+> import Numeric.FAD
 > f x = 6 - 5 * x + x ^ 2  -- Our example function
 
 Basic usage of the differentiation operator:

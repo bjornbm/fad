@@ -1,4 +1,4 @@
-import Numeric.Fad
+import Numeric.FAD
 import Data.Complex
 import Test.QuickCheck
 
@@ -19,7 +19,7 @@ nearby accuracy x1 x2 = abs (x1 - x2) < accuracy
 --   prop_constant_one x y = diffUU (\y -> lift x + y) y == (1 :: Double)
 --
 
--- Test cases copied from end of Fad.hs.
+-- Test cases copied from end of Numeric/FAD.hs.
 prop_is1, prop_is2 :: Double -> Bool
 prop_is1 x = diffUU (\x ->    diffUU ((lift x)*) 2)  x == 1
 prop_is2 x = diffUU (\x -> x*(diffUU ((lift x)*) 2)) x == 2 * x
