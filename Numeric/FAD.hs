@@ -375,24 +375,24 @@ instance Floating a => Floating (Dual tag a) where
  around the unit circule, so you might not notice them with random
  testing.
 
- *Fad> let shouldBeOne a = diff (\a->atan2 (sin a) (cos a)) a
+ *FAD> let shouldBeOne a = diff (\a->atan2 (sin a) (cos a)) a
 
- *Fad> shouldBeOne (pi/2-1e-12)
+ *FAD> shouldBeOne (pi/2-1e-12)
  1.0
 
- *Fad> shouldBeOne (pi/2)
+ *FAD> shouldBeOne (pi/2)
  1.0
 
- *Fad> shouldBeOne (pi/2+1e-12)
+ *FAD> shouldBeOne (pi/2+1e-12)
  1.0
 
- *Fad> diff shouldBeOne (pi/2-1e-12)
+ *FAD> diff shouldBeOne (pi/2-1e-12)
  0.0
 
- *Fad> diff shouldBeOne (pi/2)
+ *FAD> diff shouldBeOne (pi/2)
  -4.0                          -- <<<<<<<<<<<<<<<< BUG IS HERE
 
- *Fad> diff shouldBeOne (pi/2+1e-12)
+ *FAD> diff shouldBeOne (pi/2+1e-12)
  0.0
 
 -}
@@ -626,7 +626,7 @@ taylor f x dx = snd
 --  @take 10 $ zeroNewton (\\x->x^2-4) 1  -- converge to 2.0@
 --
 -- TEST CASE
---  :module Complex Fad
+--  :module Complex FAD
 --  @take 10 $ zeroNewton ((+1).(^2)) (1 :+ 1)  -- converge to (0 :+ 1)@
 --
 zeroNewton :: Fractional a =>
