@@ -60,7 +60,9 @@ module Numeric.FAD (
             Dual, lift,
             -- * First-Order Differentiation Operators
             diffUU, diffUF, diffMU, diffMF,
-            diffUU2, diffUF2, diffMU2, diffMF2,
+            diff2UU, diff2UF, diff2MU, diff2MF,
+            -- * Higher-Order Differentiation Operators
+            diffsUU, diffsUF, diffsMU, diffsMF,
             -- * Common access patterns
             diff, diff2, diffs, grad, jacobian,
             -- * Optimization Routines
@@ -155,13 +157,13 @@ lift = flip bundle zero
 --
 -- Property: @x = bundle (primal x) (tangentTower x)@
 bundle :: Num a => a -> Dual tag a -> Dual tag a
-bundle x0 x' = Tower (x0:towerList x')
+bundle x0 x' = toTower (x0:fromTower x')
 -- The following forces its second argument's structure, which is very bad:
--- bundle x0 (Tower xs) = Tower (x0:xs)
+-- bundle x0 (Tower xs) = toTower (x0:xs)
 
 -- | The zero element of a Dual Number tower algebra
 zero :: Num a => Dual tag a
-zero = Tower []
+zero = toTower []
 
 -- | The 'apply' function applies a function to a number lifted from
 -- the primal domain to the dual number domain, with derivative 1,
@@ -182,11 +184,16 @@ towerElt i (Tower xs) = xs !!! i
 (x0:xs) !!! 0 = x0
 (x0:xs) !!! i = xs !!! (i-1)
 
--- | The 'towerList' function converts a dual number tower to a list
+-- | The 'fromTower' function converts a dual number tower to a list
 -- of values with the i-th derivatives, i=0,1,..., possibly truncated
 -- when all remaining values in the tower are zero.
-towerList :: Dual tag a -> [a]
-towerList (Tower xs) = xs
+fromTower :: Dual tag a -> [a]
+fromTower (Tower xs) = xs
+
+-- | The 'toTower' function converts a list of numbers into a dual
+-- | number tower.
+toTower :: [a] -> Dual tag a
+toTower = Tower
 
 -- | The 'primal' function finds the primal value from a dual number
 -- | tower.  The inverse of 'lift'.
@@ -204,7 +211,7 @@ tangent = towerElt 1
 -- derivative.
 tangentTower :: Num a => Dual tag a -> Dual tag a
 tangentTower (Tower []) = zero
-tangentTower (Tower (_ : x')) = Tower x'
+tangentTower (Tower (_ : x')) = toTower x'
 
 -- | The 'liftA1' function lifts a scalar numeric function from a base
 -- numeric type to a function over derivative towers.  Takes the
@@ -279,7 +286,7 @@ liftA2disc f x y = f (primal x) (primal y)
 -- primal domain into the derivative tower domain.  WARNING: the
 -- restriction to linear functions is not enforced by the type system.
 liftLin :: (a -> b) -> Dual tag a -> Dual tag b
-liftLin f = Tower . map f . towerList
+liftLin f = toTower . map f . fromTower
 
 -- Numeric operations on derivative towers.
 
@@ -453,6 +460,11 @@ instance (Enum a, Num a) => Enum (Dual tag a) where
 -- of arbitrary shape, which includes lists as a special case, on
 -- output.
 
+
+-- diff{U/M}{U/F}: Derivative-taking operators that return a
+-- primal/first-derivative pair, for all combinations of
+-- scalar/nonscalar input & output
+
 -- | The 'diffUU' function calculates the first derivative of a
 -- scalar-to-scalar function.
 diffUU :: (Num a, Num b) => (forall tag. Dual tag a -> Dual tag b) -> a -> b
@@ -478,29 +490,80 @@ diffMF :: (Num a, Num b, Functor f) =>
           (forall tag. [Dual tag a] -> f (Dual tag b)) -> [a] -> [a] -> f b
 diffMF f xs = fmap tangent . f . zipWithBundle xs
 
--- | The 'diffUU2' function calculates the value and derivative, as a
+-- diff2{U/M}{U/F}: Derivative-taking operators that calculate a
+-- (primal, first-derivative) pair, for all combinations of
+-- scalar/nonscalar input & output
+
+-- | The 'diff2UU' function calculates the value and derivative, as a
 -- pair, of a scalar-to-scalar function.
-diffUU2 :: (Num a, Num b) => (forall tag. Dual tag a -> Dual tag b) -> a -> (b,b)
-diffUU2 f = dualToPair . apply f
+diff2UU :: (Num a, Num b) => (forall tag. Dual tag a -> Dual tag b) -> a -> (b,b)
+diff2UU f = dualToPair . apply f
 
 -- | The 'diffUF2' function calculates the value and derivative, as a
 -- pair, of a scalar-to-nonscalar function.
-diffUF2 :: (Functor f, Num a, Num b) =>
+diff2UF :: (Functor f, Num a, Num b) =>
            (forall tag. Dual tag a -> f (Dual tag b)) -> a -> (f b, f b)
-diffUF2 f = fdualsToPair . apply f
+diff2UF f = fdualsToPair . apply f
 
 -- | The 'diffMU2' function calculates the value and directional
 -- derivative, as a pair, of a nonscalar-to-scalar function.
-diffMU2 :: (Num a, Num b) =>
+diff2MU :: (Num a, Num b) =>
            (forall tag. [Dual tag a] -> Dual tag b) -> [a] -> [a] -> (b,b)
-diffMU2 f xs = dualToPair . f . zipWithBundle xs
+diff2MU f xs = dualToPair . f . zipWithBundle xs
 
 -- | The 'diffMF2' function calculates the value and directional
 -- derivative, as a pair, of a nonscalar-to-nonscalar function.
-diffMF2 :: (Functor f, Num a, Num b) =>
+diff2MF :: (Functor f, Num a, Num b) =>
            (forall tag. [Dual tag a] -> f (Dual tag b))
                -> [a] -> [a] -> (f b, f b)
-diffMF2 f xs = fdualsToPair . f . zipWithBundle xs
+diff2MF f xs = fdualsToPair . f . zipWithBundle xs
+
+
+-- diff{U/M}{U/F}s: Derivative-taking operators that return a list
+-- [primal, first-derivative, 2nd-derivative, ...], for all
+-- combinations of scalar/nonscalar input & output.
+
+zeroPad :: Num a => [a] -> [a]
+zeroPad = (++ repeat 0)
+
+transposeF :: (Functor f, Num a) => f [a] -> [f a]
+-- transposeF x = fmap car0 x : transposeF (fmap cdr0 x)
+--     where car0 [] = 0
+--           car0 (x:_) = x
+--           cdr0 [] = []
+--           cdr0 (_:xs) = xs
+
+transposeF = transF . fmap zeroPad
+    where transF x = fmap (!!0) x:(transF $ fmap (\(_:a)->a) x)
+
+-- | The 'diffsUU' function calculates a list of derivatives of a
+-- scalar-to-scalar function. The 0-th element of the list is the
+-- primal value, the 1-st element is the first derivative, etc.
+diffsUU :: (Num a, Num b) => (forall tag. Dual tag a -> Dual tag b) -> a -> [b]
+diffsUU f = zeroPad . fromTower . apply f
+
+-- | The 'diffsUF' function calculates an infinite list of derivatives
+-- of a scalar-to-nonscalar function.  The 0-th element of the list is
+-- the primal value, the 1-st element is the first derivative, etc.
+diffsUF :: (Num a, Num b, Functor f) => (forall tag. Dual tag a -> f (Dual tag b)) -> a -> [f b]
+diffsUF f = transposeF . fmap fromTower . apply f
+
+-- | The 'diffsMU' function calculates an infinite list of derivatives
+-- of a nonscalar-to-scalar function.  The 0-th element of the list is
+-- the primal value, the 1-st element is the first derivative, etc.
+-- The input is a (possibly truncated) list of the primal, first
+-- derivative, etc, of the input.
+diffsMU :: (Num a, Num b) => (forall tag. [Dual tag a] -> Dual tag b) -> [[a]] -> [b]
+diffsMU f = zeroPad . fromTower . f . map toTower . transposeF
+
+-- | The 'diffsMF' function calculates an infinite list of derivatives
+-- of a nonscalar-to-nonscalar function.  The 0-th element of the list
+-- is the primal value, the 1-st element is the first derivative, etc.
+-- The input is a (possibly truncated) list of the primal, first
+-- derivative, etc, of the input.
+diffsMF :: (Functor f, Num a, Num b) => (forall tag. [Dual tag a] -> f (Dual tag b)) -> [[a]] -> [f b]
+diffsMF f = transposeF . fmap fromTower . f . map toTower . transposeF
+
 
 -- Common access patterns
 
@@ -508,15 +571,15 @@ diffMF2 f xs = fdualsToPair . f . zipWithBundle xs
 diff :: (Num a, Num b) => (forall tag. Dual tag a -> Dual tag b) -> a -> b
 diff = diffUU
 
--- | The 'diff2' function is a synonym for 'diffUU2'.
+-- | The 'diff2' function is a synonym for 'diff2UU'.
 diff2 :: (Num a, Num b) => (forall tag. Dual tag a -> Dual tag b) -> a -> (b, b)
-diff2 = diffUU2
+diff2 = diff2UU
 
 -- | The 'diffs' function calculates the infinite list of derivatives
 -- of a scalar-to-scalar function. The 0-th element of the list is the 
 -- primal value, the 1-st element is the first derivative, etc.
 diffs :: (Num a, Num b) => (forall tag. Dual tag a -> Dual tag b) -> a -> [b]
-diffs f = (++ repeat 0) . towerList . apply f
+diffs = diffsUU
 
 -- | The 'grad' function calculates the gradient of a
 -- nonscalar-to-scalar function, using n invocations of forward AD,
@@ -604,7 +667,7 @@ taylor :: Fractional a => (forall tag. Dual tag a -> Dual tag a) -> a -> a -> [a
 taylor f x dx = snd
                 $ mapAccumL (\a x -> app2 (,) $ a+x) 0
                       $ zipWith3 (\x y z -> x*y*z)
-                            (towerList $ apply f x)
+                            (fromTower $ apply f x)
                             recipFactorials
                             (powers dx)
     where
@@ -631,7 +694,7 @@ taylor f x dx = snd
 --
 zeroNewton :: Fractional a =>
               (forall tag. Dual tag a -> Dual tag a) -> a -> [a]
-zeroNewton f x0 = iterate (\x -> let (y,y') = diffUU2 f x in x - y/y') x0
+zeroNewton f x0 = iterate (\x -> let (y,y') = diff2UU f x in x - y/y') x0
 
 -- | The 'inverseNewton' function inverts a scalar function using
 -- Newton's method; its output is a stream of increasingly accurate
@@ -718,11 +781,11 @@ diffMF id [10..14] [0..4]
 ds :: (forall tag. Dual tag a -> Dual tag b) -> a -> [b]
 
 ds f x = y:(ds (diffUU f) x)
-    where (y,y') = diffUU2 f x
+    where (y,y') = diff2UU f x
 
 ds f x = (f x):(ds (diffUU f) x)
 
 ds f x = y:y':(ds (diffUU (diffUU f)) x)
-    where (y,y') = diffUU2 f x
+    where (y,y') = diff2UU f x
 
 -}
