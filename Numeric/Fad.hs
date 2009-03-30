@@ -40,6 +40,10 @@ perturbation confusion, although it would be nice to have an actual
 proof of this.  The technique does require adding invocations of
 lift at appropriate places when nesting is present.
 
+-}
+
+{-
+
 The \"pass in a lifter\" approach, discussed in the HOSC paper, was
 rediscovered and implemented by David Roundy (<droundy@darcs.net>)
 <http://thread.gmane.org/gmane.comp.lang.haskell.cafe/22308>
@@ -48,6 +52,7 @@ is therefore not used here.  It however could be combined with
 tagging to allow dynamic nesting, if the type system would allow.
 
 -}
+
 
 -- Forward Automatic Differentiation
 module Numeric.Fad (
