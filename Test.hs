@@ -44,20 +44,21 @@ prop_atan2_shouldBeOne :: Double -> Bool
 prop_atan2_shouldBeOne a = diff (\a->atan2 (sin a) (cos a)) a ~= 1
 
 
--- Some diffs test cases:
+-- @diffsUU@ test cases.
+prop_diffs_1 = (diffsUU (^5) 1) == [1,5,20,60,120,120]
 
--- diffsUU (^5) 1
--- [1,5,20,60,120,120]
+-- @diffs0UU@ test cases:
+prop_diffs_2 = (take 20 $ diffs0UU (^5) 1) == [1,5,20,60,120,120,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
 
--- take 20 $ diffs0UU (^5) 1
--- [1,5,20,60,120,120,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
+-- @diffsUF@ test cases:
+prop_diffs_3 = (diffsUF ((:[]) . (^5)) 1) == [[1],[5],[20],[60],[120],[120]]
 
--- diffsUF ((:[]) . (^5)) 1
--- [[1],[5],[20],[60],[120],[120]]
+-- @diffs0UF@ test cases:
+prop_diffs_4 =
+    (take 20 $ diffs0UF ((:[]) . (^5)) 1)
+    == [[1],[5],[20],[60],[120],[120],[0],[0],[0],[0],[0],[0],[0],[0],[0],[0],[0],[0],[0],[0]]
 
--- take 20 $ diffs0UF ((:[]) . (^5)) 1
--- [[1],[5],[20],[60],[120],[120],[0],[0],[0],[0],[0],[0],[0],[0],[0],[0],[0],[0],[0],[0]]
-
+-- @taylor@ test cases:
 prop_taylor_sin i x = sin x ~= ((taylor sin 0 x)!!i)
 
 -- Test all properties.
@@ -74,3 +75,7 @@ main = do
   quickCheck prop_atan2_shouldBeOne
   onceCheck (prop_atan2_shouldBeOne (pi/2))
   onceCheck (prop_taylor_sin 40 (2*pi))
+  onceCheck prop_diffs_1
+  onceCheck prop_diffs_2
+  onceCheck prop_diffs_3
+  onceCheck prop_diffs_4
