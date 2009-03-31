@@ -517,7 +517,7 @@ diff2UU f = dualToPair . apply f
 
 -- | The 'diffUF2' function calculates the value and derivative, as a
 -- pair, of a scalar-to-nonscalar function.
-diff2UF :: (Functor f, Num a, Num b) =>
+diff2UF :: (Num a, Num b, Functor f) =>
            (forall tag. Dual tag a -> f (Dual tag b)) -> a -> (f b, f b)
 diff2UF f = fdualsToPair . apply f
 
@@ -529,7 +529,7 @@ diff2MU f xs = dualToPair . f . zipWithBundle xs
 
 -- | The 'diffMF2' function calculates the value and directional
 -- derivative, as a pair, of a nonscalar-to-nonscalar function.
-diff2MF :: (Functor f, Num a, Num b) =>
+diff2MF :: (Num a, Num b, Functor f) =>
            (forall tag. [Dual tag a] -> f (Dual tag b))
                -> [a] -> [a] -> (f b, f b)
 diff2MF f xs = fdualsToPair . f . zipWithBundle xs
@@ -573,7 +573,7 @@ transposePadF pad fx =
 
 -- The 'transposeF' function transposes w/ infinite zero row padding.
 
--- transposeF :: (Functor f, Num a) => f [a] -> [f a]
+-- transposeF :: (Num a, Functor f) => f [a] -> [f a]
 -- transposeF = transF . fmap zeroPad
 --     where transF x = (fmap (!!0) x) : (transF $ fmap (drop 1) x)
 
@@ -613,7 +613,7 @@ diffsMU f = fromTower . f . map toTower . transposePad 0
 -- is the primal value, the 1-st element is the first derivative, etc.
 -- The input is a (possibly truncated) list of the primal, first
 -- derivative, etc, of the input.
-diffsMF :: (Functor f, Foldable f, Num a, Num b) => (forall tag. [Dual tag a] -> f (Dual tag b)) -> [[a]] -> [f b]
+diffsMF :: (Num a, Num b, Functor f, Foldable f) => (forall tag. [Dual tag a] -> f (Dual tag b)) -> [[a]] -> [f b]
 diffsMF f = transposePadF 0 . fmap fromTower . f . map toTower . transposePad 0
 
 -- Variants of diffsXX names diffs0XX, which zero-pad the output list
@@ -631,7 +631,7 @@ diffs0MU :: (Num a, Num b) => (forall tag. [Dual tag a] -> Dual tag b) -> [[a]] 
 diffs0MU f = zeroPad . diffsMU f
 
 -- | The 'diffs0MF' function is like 'diffsMF' except the output is zero padded.
-diffs0MF :: (Functor f, Foldable f, Num a, Num b) => (forall tag. [Dual tag a] -> f (Dual tag b)) -> [[a]] -> [f b]
+diffs0MF :: (Num a, Num b, Functor f, Foldable f) => (forall tag. [Dual tag a] -> f (Dual tag b)) -> [[a]] -> [f b]
 diffs0MF f = zeroPadF . diffsMF f
 
 -- Common access patterns
@@ -673,7 +673,7 @@ dualToPair x = (primal x, tangent x)
 -- | The 'fdualsToPair' function converts a functor of derivative
 -- towers to a pair: one with the functor holding the primal values,
 -- the other with the functor holding the first derivatives.
-fdualsToPair :: (Functor f, Num a) => f (Dual tag a) -> (f a, f a)
+fdualsToPair :: (Num a, Functor f) => f (Dual tag a) -> (f a, f a)
 fdualsToPair fxs = (fmap primal fxs, fmap tangent fxs)
 
 -- | The 'zipWithBundle' function zip two lists of numbers into a list
@@ -694,19 +694,19 @@ lowerUU f = primal . f . lift
 
 -- | The 'lowerUF' function lowers a function over dual numbers to a
 -- function over primals, where the function is scalar-to-nonscalar.
-lowerUF :: (Num a, Functor fb, Num b) =>
+lowerUF :: (Num a, Num b, Functor fb) =>
             (forall tag. Dual tag a -> fb (Dual tag b)) -> a -> (fb b)
 lowerUF f = fmap primal . f . lift
 
 -- | The 'lowerFU' function lowers a function over dual numbers to a
 -- function over primals where the function is nonscalar-to-scalar.
-lowerFU :: (Functor fa, Num a, Num b) =>
+lowerFU :: (Num a, Num b, Functor fa) =>
            (forall tag. fa (Dual tag a) -> Dual tag b) -> (fa a) -> b
 lowerFU f = primal . f . fmap lift
 
 -- | The 'lowerFF' function lowers a function over dual numbers to a
 -- function over primals where the function is nonscalar-to-nonscalar.
-lowerFF :: (Functor fa, Num a, Functor fb, Num b) =>
+lowerFF :: (Num a, Num b, Functor fa, Functor fb) =>
            (forall tag. fa (Dual tag a) -> fb (Dual tag b))
                -> (fa a) -> (fb b)
 lowerFF f = fmap primal . f . fmap lift
