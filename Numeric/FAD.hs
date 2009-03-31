@@ -644,11 +644,9 @@ diff = diffUU
 diff2 :: (Num a, Num b) => (forall tag. Dual tag a -> Dual tag b) -> a -> (b, b)
 diff2 = diff2UU
 
--- | The 'diffs' function calculates the infinite list of derivatives
--- of a scalar-to-scalar function. The 0-th element of the list is the 
--- primal value, the 1-st element is the first derivative, etc.
+-- | The 'diffs' function is a synonym for 'diffs0UU'.
 diffs :: (Num a, Num b) => (forall tag. Dual tag a -> Dual tag b) -> a -> [b]
-diffs = diffsUU
+diffs = diffs0UU
 
 -- | The 'grad' function calculates the gradient of a
 -- nonscalar-to-scalar function, using n invocations of forward AD,
