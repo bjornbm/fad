@@ -2,6 +2,7 @@ import Numeric.FAD
 import Data.Complex
 import Test.QuickCheck
 
+
 -- Test only once, useful for properties with no parameters (could use
 -- HUnit for such tests instead.)
 onceCheck = check (defaultConfig {configMaxTest = 1})
@@ -10,6 +11,7 @@ onceCheck = check (defaultConfig {configMaxTest = 1})
 nearby :: Double -> Double -> Double -> Bool
 nearby accuracy x1 x2 = abs (x1 - x2) < accuracy
 (~=) = nearby 1.0e-10
+infix 4 ~=
 
 
 -- Type signatures are supplied when QuickCheck is otherwise unable to
@@ -33,7 +35,7 @@ prop_jacobian = jacobian (\xs->[sum xs,product xs,log $ product $ map (sqrt . (^
              == [[1,1,1,1,1],[120,60,40,30,24],[1,1,1,1,1]]
 
 -- @zeroNewton@ test cases.
-prop_zeroNewton_1 = zeroNewton (\x->x^2-4) 1 !! 10 == 2
+prop_zeroNewton_1 = zeroNewton (\x->x^2-4) 1 !! 10 ~= 2
 prop_zeroNewton_2 = zeroNewton ((+1).(^2)) (1 :+ 1) !! 10 == 0 :+ 1
 
 -- @inverseNewton@ test case.
@@ -59,7 +61,8 @@ prop_diffs_4 =
     == [[1],[5],[20],[60],[120],[120],[0],[0],[0],[0],[0],[0],[0],[0],[0],[0],[0],[0],[0],[0]]
 
 -- @taylor@ test cases:
-prop_taylor_sin i x = sin x ~= ((taylor sin 0 x)!!i)
+prop_taylor_sin  i x = sin x ~= taylor sin 0 x !! i
+prop_taylor_sin' i x = abs x < 2*pi ==> prop_taylor_sin i x
 
 -- Test all properties.
 main = do
@@ -73,8 +76,9 @@ main = do
   onceCheck  prop_zeroNewton_2
   onceCheck  prop_inverseNewton
   quickCheck prop_atan2_shouldBeOne
-  onceCheck (prop_atan2_shouldBeOne (pi/2))
-  onceCheck (prop_taylor_sin 40 (2*pi))
+  onceCheck  $ prop_atan2_shouldBeOne (pi/2)
+  onceCheck  $ prop_taylor_sin  40 (2*pi)
+  quickCheck $ prop_taylor_sin' 40
   onceCheck prop_diffs_1
   onceCheck prop_diffs_2
   onceCheck prop_diffs_3
