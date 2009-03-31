@@ -58,17 +58,24 @@ tagging to allow dynamic nesting, if the type system would allow.
 module Numeric.FAD (
             -- * Higher-Order Dual Numbers
             Dual, lift,
+
             -- * First-Order Differentiation Operators
+            -- $fodo
             diffUU, diffUF, diffMU, diffMF,
             diff2UU, diff2UF, diff2MU, diff2MF,
+            
             -- * Higher-Order Differentiation Operators
+            -- $hodo
             diffsUU, diffsUF, diffsMU, diffsMF,
             diffs0UU, diffs0UF, diffs0MU, diffs0MF,
+            
             -- * Common access patterns
             diff, diff2, diffs, grad, jacobian,
+
             -- * Optimization Routines
             zeroNewton, inverseNewton, fixedPointNewton, extremumNewton,
             argminNaiveGradient,
+
             -- * Miscellaneous
             taylor)
 where
@@ -447,9 +454,28 @@ instance (Enum a, Num a) => Enum (Dual tag a) where
 
 -- First-Order Differentiation Operators
 
--- These have two-letter suffices for the arity of the input and
--- output of the passed functions: U for univariate, meaning a number,
--- M for multivariate, meaning a list of numbers.
+{- $fodo
+These have two-letter suffices for the arity of the input and
+output of the passed functions: U for univariate, meaning a number,
+M for multivariate, meaning a list of numbers.
+
+When the input is multivariate a directional derivative is
+calculated; this requires an additional \"direction\" parameter.  The
+multivariate case is treated as a list (on input) and as a functor
+of arbitrary shape, which includes lists as a special case, on
+output.
+
+Naming convention:
+
+[@diff{U\/M}{U\/F}@] Derivative-taking operators that return a
+    primal/first-derivative pair, for all combinations of
+    scalar/nonscalar input & output
+
+[@diff2{U\/M}{U\/F}@] Derivative-taking operators that calculate a
+    (primal, first-derivative) pair, for all combinations of
+    scalar/nonscalar input & output
+
+-}
 
 -- Perhaps these should be named things like
 --   AD.Forward.D.uu
@@ -457,16 +483,6 @@ instance (Enum a, Num a) => Enum (Dual tag a) where
 --   AD.Forward.grad
 --   AD.Forward.jacobian
 
--- When the input is multivariate a directional derivative is
--- calculated; this requires an additional "direction" parameter.  The
--- multivariate case is treated as a list (on input) and as a functor
--- of arbitrary shape, which includes lists as a special case, on
--- output.
-
-
--- diff{U/M}{U/F}: Derivative-taking operators that return a
--- primal/first-derivative pair, for all combinations of
--- scalar/nonscalar input & output
 
 -- | The 'diffUU' function calculates the first derivative of a
 -- scalar-to-scalar function.
@@ -493,9 +509,6 @@ diffMF :: (Num a, Num b, Functor f) =>
           (forall tag. [Dual tag a] -> f (Dual tag b)) -> [a] -> [a] -> f b
 diffMF f xs = fmap tangent . f . zipWithBundle xs
 
--- diff2{U/M}{U/F}: Derivative-taking operators that calculate a
--- (primal, first-derivative) pair, for all combinations of
--- scalar/nonscalar input & output
 
 -- | The 'diff2UU' function calculates the value and derivative, as a
 -- pair, of a scalar-to-scalar function.
@@ -565,9 +578,15 @@ transposePadF pad fx =
 --     where transF x = (fmap (!!0) x) : (transF $ fmap (drop 1) x)
 
 
--- diff{U/M}{U/F}s: Derivative-taking operators that return a list
--- [primal, first-derivative, 2nd-derivative, ...], for all
--- combinations of scalar/nonscalar input & output.
+{- $hodo
+
+Naming convention:
+
+[@diffs{U\/M}{U\/F}@]: Derivative-taking operators that return a list
+    [primal, first-derivative, 2nd-derivative, ...], for all
+    combinations of scalar/nonscalar input & output.
+
+-}
 
 -- | The 'diffsUU' function calculates a list of derivatives of a
 -- scalar-to-scalar function. The 0-th element of the list is the
