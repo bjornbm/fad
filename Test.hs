@@ -58,6 +58,7 @@ prop_atan2_shouldBeOne a = diff (\a->atan2 (sin a) (cos a)) a ~= 1
 -- take 20 $ diffs0UF ((:[]) . (^5)) 1
 -- [[1],[5],[20],[60],[120],[120],[0],[0],[0],[0],[0],[0],[0],[0],[0],[0],[0],[0],[0],[0]]
 
+prop_taylor_sin i x = sin x ~= ((taylor sin 0 x)!!i)
 
 -- Test all properties.
 main = do
@@ -72,3 +73,4 @@ main = do
   onceCheck  prop_inverseNewton
   quickCheck prop_atan2_shouldBeOne
   onceCheck (prop_atan2_shouldBeOne (pi/2))
+  onceCheck (prop_taylor_sin 40 (2*pi))
