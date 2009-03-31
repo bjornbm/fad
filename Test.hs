@@ -44,6 +44,21 @@ prop_atan2_shouldBeOne :: Double -> Bool
 prop_atan2_shouldBeOne a = diff (\a->atan2 (sin a) (cos a)) a ~= 1
 
 
+-- Some diffs test cases:
+
+-- diffsUU (^5) 1
+-- [1,5,20,60,120,120]
+
+-- take 20 $ diffs0UU (^5) 1
+-- [1,5,20,60,120,120,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
+
+-- diffsUF ((:[]) . (^5)) 1
+-- [[1],[5],[20],[60],[120],[120]]
+
+-- take 20 $ diffs0UF ((:[]) . (^5)) 1
+-- [[1],[5],[20],[60],[120],[120],[0],[0],[0],[0],[0],[0],[0],[0],[0],[0],[0],[0],[0],[0]]
+
+
 -- Test all properties.
 main = do
   quickCheck prop_is1
