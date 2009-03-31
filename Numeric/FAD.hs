@@ -65,7 +65,7 @@ module Numeric.FAD (
             diffsUU, diffsUF, diffsMU, diffsMF,
             diffs0UU, diffs0UF, diffs0MU, diffs0MF,
             -- * Common access patterns
-            diff, diff2, diffs, grad, jacobian,
+            diff, diff2, diffs, diffs0, grad, jacobian,
             -- * Optimization Routines
             zeroNewton, inverseNewton, fixedPointNewton, extremumNewton,
             argminNaiveGradient,
@@ -628,8 +628,13 @@ diff2 = diff2UU
 -- | The 'diffs' function calculates the infinite list of derivatives
 -- of a scalar-to-scalar function. The 0-th element of the list is the 
 -- primal value, the 1-st element is the first derivative, etc.
+-- Synonym for 'diffsUU'.
 diffs :: (Num a, Num b) => (forall tag. Dual tag a -> Dual tag b) -> a -> [b]
 diffs = diffsUU
+
+-- | The 'diffs0' function is a synonym for 'diffs0UU'.
+diffs0 :: (Num a, Num b) => (forall tag. Dual tag a -> Dual tag b) -> a -> [b]
+diffs0 = diffs0UU
 
 -- | The 'grad' function calculates the gradient of a
 -- nonscalar-to-scalar function, using n invocations of forward AD,
