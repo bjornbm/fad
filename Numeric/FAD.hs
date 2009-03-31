@@ -70,7 +70,7 @@ module Numeric.FAD (
             diffs0UU, diffs0UF, diffs0MU, diffs0MF,
             
             -- * Common access patterns
-            diff, diff2, diffs, grad, jacobian,
+            diff, diff2, diffs, diffs0, grad, jacobian,
 
             -- * Optimization Routines
             zeroNewton, inverseNewton, fixedPointNewton, extremumNewton,
@@ -644,9 +644,13 @@ diff = diffUU
 diff2 :: (Num a, Num b) => (forall tag. Dual tag a -> Dual tag b) -> a -> (b, b)
 diff2 = diff2UU
 
--- | The 'diffs' function is a synonym for 'diffs0UU'.
+-- | The 'diffs' function is a synonym for 'diffsUU'.
 diffs :: (Num a, Num b) => (forall tag. Dual tag a -> Dual tag b) -> a -> [b]
-diffs = diffs0UU
+diffs = diffsUU
+
+-- | The 'diffs0' function is a synonym for 'diffs0UU'.
+diffs0 :: (Num a, Num b) => (forall tag. Dual tag a -> Dual tag b) -> a -> [b]
+diffs0 = diffs0UU
 
 -- | The 'grad' function calculates the gradient of a
 -- nonscalar-to-scalar function, using n invocations of forward AD,
