@@ -565,11 +565,9 @@ transposePadF :: (Foldable f, Functor f) => a -> f [a] -> [f a]
 transposePadF pad fx =
     if Data.Foldable.all null fx
     then []
-    else (fmap carPad fx) : (transposePadF pad (fmap cdr fx))
+    else (fmap carPad fx) : (transposePadF pad (fmap (drop 1) fx))
     where carPad [] = pad
           carPad (x:_) = x
-          cdr [] = []
-          cdr (_:xs) = xs
 
 -- The 'transposeF' function transposes w/ infinite zero row padding.
 
