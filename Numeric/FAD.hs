@@ -545,29 +545,27 @@ zeroPadF :: (Num a, Functor f) => [f a] -> [f a]
 zeroPadF fxs@(fx:_) = fxs ++ repeat (fmap (const 0) fx)
 
 -- | The 'transposePad' function is like Data.List.transpose except
--- that it fills in missing elements with the given padding item
--- rather than skipping them.  It can give a ragged output to a ragged
--- input, but the lengths in the output are nonincreasing.
+-- that it fills in missing elements with 0 rather than skipping them.
+-- It can give a ragged output to a ragged input, but the lengths in
+-- the output are nonincreasing.
 
-transposePad :: a -> [[a]] -> [[a]]
-transposePad pad [] = []
-transposePad pad (xs:xss) = glom xs (transposePad pad xss)
+transposePad :: Num a => [[a]] -> [[a]]
+transposePad [] = []
+transposePad (xs:xss) = glom xs (transposePad xss)
     where glom xs [] = map (:[]) xs
-          glom [] xss = map (pad:) xss
+          glom [] xss = map (0:) xss
           glom (x0:xs) (xss0:xss) = (x0:xss0):(glom xs xss)
 
 -- | The 'transposePadF' function is like Data.List.transpose except
--- that it fills in missing elements with the given padding item
--- rather than skipping them, and is generalized to Foldable Functors.
--- Unlike transposePad, it gives a "square" output to a ragged input.
+-- that it fills in missing elements with 0 rather than skipping them,
+-- and is generalized to Foldable Functors.  Unlike transposePad, it
+-- gives a "square" output to a ragged input.
 
-transposePadF :: (Foldable f, Functor f) => a -> f [a] -> [f a]
-transposePadF pad fx =
+transposePadF :: (Num a, Foldable f, Functor f) => f [a] -> [f a]
+transposePadF fx =
     if Data.Foldable.all null fx
     then []
-    else (fmap carPad fx) : (transposePadF pad (fmap (drop 1) fx))
-    where carPad [] = pad
-          carPad (x:_) = x
+    else (fmap (!!! 0) fx) : (transposePadF (fmap (drop 1) fx))
 
 -- The 'transposeF' function transposes w/ infinite zero row padding.
 
@@ -596,7 +594,7 @@ diffsUU f = fromTower . apply f
 -- of a scalar-to-nonscalar function.  The 0-th element of the list is
 -- the primal value, the 1-st element is the first derivative, etc.
 diffsUF :: (Num a, Num b, Functor f, Foldable f) => (forall tag. Dual tag a -> f (Dual tag b)) -> a -> [f b]
-diffsUF f = transposePadF 0 . fmap fromTower . apply f
+diffsUF f = transposePadF . fmap fromTower . apply f
 
 -- | The 'diffsMU' function calculates an infinite list of derivatives
 -- of a nonscalar-to-scalar function.  The 0-th element of the list is
@@ -604,7 +602,7 @@ diffsUF f = transposePadF 0 . fmap fromTower . apply f
 -- The input is a (possibly truncated) list of the primal, first
 -- derivative, etc, of the input.
 diffsMU :: (Num a, Num b) => (forall tag. [Dual tag a] -> Dual tag b) -> [[a]] -> [b]
-diffsMU f = fromTower . f . map toTower . transposePad 0
+diffsMU f = fromTower . f . map toTower . transposePad
 
 -- | The 'diffsMF' function calculates an infinite list of derivatives
 -- of a nonscalar-to-nonscalar function.  The 0-th element of the list
@@ -612,7 +610,7 @@ diffsMU f = fromTower . f . map toTower . transposePad 0
 -- The input is a (possibly truncated) list of the primal, first
 -- derivative, etc, of the input.
 diffsMF :: (Num a, Num b, Functor f, Foldable f) => (forall tag. [Dual tag a] -> f (Dual tag b)) -> [[a]] -> [f b]
-diffsMF f = transposePadF 0 . fmap fromTower . f . map toTower . transposePad 0
+diffsMF f = transposePadF . fmap fromTower . f . map toTower . transposePad
 
 -- Variants of diffsXX names diffs0XX, which zero-pad the output list
 
