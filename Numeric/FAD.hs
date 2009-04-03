@@ -834,17 +834,6 @@ is1       = diffUU (\x -> diffUU ((lift x)*) 2) 1
 
 constant_one x = diffUU (\y -> x + y) 1 -- fails type check w/ tags
 
--- Successful tests of directional derivative:
-
--- should be [54321]
-diffMF (\xs -> [sum (zipWith (*) xs [1..5])]) [1,1,1,1,1] (map (10^) [0..4])
-
--- should be [[1.0,1.0,1.0,1.0,1.0],[120.0,60.0,40.0,30.0,24.0],[1.0,1.0,1.0,1.0,1.0]]
-jacobian (\xs->[sum xs,product xs,log $ product $ map (sqrt . (^2) . exp) xs]) [1..5]
-
--- should be [0,1,2,3,4]
-diffMF id [10..14] [0..4]
-
 -- Higher-Order derivatives via nesting, fails type check
 
 ds :: (forall tag. Dual tag a -> Dual tag b) -> a -> [b]
