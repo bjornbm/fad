@@ -48,6 +48,7 @@ prop_atan2_shouldBeOne a = diff (\a->atan2 (sin a) (cos a)) a ~= 1
 
 -- @diffsUU@ test cases.
 prop_diffs_1 = (diffsUU (^5) 1) == [1,5,20,60,120,120]
+prop_diffs_5 i = i >= 0 ==> 2^i ~= diffsUU (exp . (2*)) 0 !! i
 
 -- @diffs0UU@ test cases:
 prop_diffs_2 = (take 20 $ diffs0UU (^5) 1) == [1,5,20,60,120,120,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
@@ -83,3 +84,4 @@ main = do
   onceCheck prop_diffs_2
   onceCheck prop_diffs_3
   onceCheck prop_diffs_4
+  quickCheck prop_diffs_5
