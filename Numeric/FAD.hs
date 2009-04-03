@@ -56,8 +56,8 @@ tagging to allow dynamic nesting, if the type system would allow.
 
 -- Forward Automatic Differentiation
 module Numeric.FAD (
-            -- * Higher-Order Dual Numbers
-            Dual, lift,
+            -- * Higher-Order Generalized Dual Numbers
+            Tower, lift,
 
             -- * First-Order Differentiation Operators
             -- $fodo
@@ -146,19 +146,19 @@ import qualified Data.Foldable (all)
 -- strange since it would just be the identity for real numbers.
 
 
--- | The 'Dual' type is a concrete representation of a higher-order
+-- | The 'Tower' type is a concrete representation of a higher-order
 -- Dual number, meaning a number augmented with a tower of
 -- derivatives.  These generalize the Dual numbers of Clifford (1873),
 -- which hold only a first derivative.  They can be converted to
 -- formal power series via division by the sequence of factorials.
-newtype Dual tag a = Tower [a] deriving Show
+newtype Tower tag a = Tower [a] deriving Show
 
 -- Injectors and accessors for derivative towers
 
 -- | The 'lift' function injects a primal number into the domain of
 -- dual numbers, with a zero tower.  If dual numbers were a monad,
 -- 'lift' would be 'return'.
-lift :: Num a => a -> Dual tag a
+lift :: Num a => a -> Tower tag a
 lift = flip bundle zero
 
 -- | The 'bundle' function takes a primal number and a dual number
@@ -166,26 +166,26 @@ lift = flip bundle zero
 -- up one and the new primal inserted.
 --
 -- Property: @x = bundle (primal x) (tangentTower x)@
-bundle :: Num a => a -> Dual tag a -> Dual tag a
+bundle :: Num a => a -> Tower tag a -> Tower tag a
 bundle x0 x' = toTower (x0:fromTower x')
 -- The following forces its second argument's structure, which is very bad:
 -- bundle x0 (Tower xs) = toTower (x0:xs)
 
--- | The zero element of a Dual Number tower algebra
-zero :: Num a => Dual tag a
+-- | The zero element of a Tower Number tower algebra
+zero :: Num a => Tower tag a
 zero = toTower []
 
 -- | The 'apply' function applies a function to a number lifted from
 -- the primal domain to the dual number domain, with derivative 1,
 -- thus calculating the generalized push-forward, in the differential
 -- geometric sense, of the given function at the given point.
-apply :: Num a => (Dual tag a -> b) -> a -> b
+apply :: Num a => (Tower tag a -> b) -> a -> b
 apply = (. flip bundle 1)
 
 -- | The 'towerElt' function finds the i-th element of a dual number
 -- | tower, where the 0-th element is the primal value, the 1-st
 -- | element is the first derivative, etc.
-towerElt :: Num a => Int -> Dual tag a -> a
+towerElt :: Num a => Int -> Tower tag a -> a
 towerElt i (Tower xs) = xs !!! i
 
 [] !!! i = if i<0
@@ -197,29 +197,29 @@ towerElt i (Tower xs) = xs !!! i
 -- | The 'fromTower' function converts a dual number tower to a list
 -- of values with the i-th derivatives, i=0,1,..., possibly truncated
 -- when all remaining values in the tower are zero.
-fromTower :: Dual tag a -> [a]
+fromTower :: Tower tag a -> [a]
 fromTower (Tower xs) = xs
 
 -- | The 'toTower' function converts a list of numbers into a dual
 -- | number tower.
-toTower :: [a] -> Dual tag a
+toTower :: [a] -> Tower tag a
 toTower = Tower
 
 -- | The 'primal' function finds the primal value from a dual number
 -- | tower.  The inverse of 'lift'.
-primal :: Num a => Dual tag a -> a
+primal :: Num a => Tower tag a -> a
 primal = towerElt 0
 
 -- | The 'tangent' function finds the tangent value of a dual number
 -- | tower, i.e., the first-order derivative.
-tangent :: Num a => Dual tag a -> a
+tangent :: Num a => Tower tag a -> a
 tangent = towerElt 1
 
 -- | The 'tangentTower' function finds the entire tower of tangent
 -- values of a dual number tower, starting at the 1st derivative.
 -- This is equivalent, in an appropriate sense, to taking the first
 -- derivative.
-tangentTower :: Num a => Dual tag a -> Dual tag a
+tangentTower :: Num a => Tower tag a -> Tower tag a
 tangentTower (Tower []) = zero
 tangentTower (Tower (_ : x')) = toTower x'
 
@@ -231,8 +231,8 @@ tangentTower (Tower (_ : x')) = toTower x'
 -- EXAMPLE: @liftA1 sin cos@
 liftA1 :: Num a =>
          (a -> a)
-             -> (Dual tag a -> Dual tag a)
-             -> Dual tag a -> Dual tag a
+             -> (Tower tag a -> Tower tag a)
+             -> Tower tag a -> Tower tag a
 
 liftA1 f = (liftA1_ f) . const
 
@@ -245,8 +245,8 @@ liftA1 f = (liftA1_ f) . const
 -- EXAMPLE: @liftA2 (*) (\\x y -> (y,x))@
 liftA2 :: Num a =>
          (a -> a -> a)
-             -> (Dual tag a -> Dual tag a -> (Dual tag a, Dual tag a))
-             -> Dual tag a -> Dual tag a -> Dual tag a
+             -> (Tower tag a -> Tower tag a -> (Tower tag a, Tower tag a))
+             -> Tower tag a -> Tower tag a -> Tower tag a
 
 liftA2 f = (liftA2_ f) . const
 
@@ -257,8 +257,8 @@ liftA2 f = (liftA2_ f) . const
 -- EXAMPLE: @liftA1_ exp const@
 liftA1_ :: Num a =>
          (a -> a)
-             -> (Dual tag a -> Dual tag a -> Dual tag a)
-             -> Dual tag a -> Dual tag a
+             -> (Tower tag a -> Tower tag a -> Tower tag a)
+             -> Tower tag a -> Tower tag a
 
 liftA1_ f df x = z
     where z = bundle (f (primal x)) (tangentTower x * df z x)
@@ -270,11 +270,11 @@ liftA1_ f df x = z
 -- EXAMPLE: @liftA2_ (**) (\z x y -> (y*z\/x, z*log x))@
 liftA2_ :: Num a =>
          (a -> a -> a)
-             -> (Dual tag a
-                     -> Dual tag a
-                     -> Dual tag a
-                     -> (Dual tag a, Dual tag a))
-             -> Dual tag a -> Dual tag a -> Dual tag a
+             -> (Tower tag a
+                     -> Tower tag a
+                     -> Tower tag a
+                     -> (Tower tag a, Tower tag a))
+             -> Tower tag a -> Tower tag a -> Tower tag a
 
 liftA2_ f df x y = z
     where z = bundle z0 z'
@@ -284,23 +284,23 @@ liftA2_ f df x y = z
 
 -- | The 'liftA1disc' function lifts a scalar function with numeric
 -- input and discrete output from into the derivative tower domain.
-liftA1disc :: Num a => (a -> c) -> Dual tag a -> c
+liftA1disc :: Num a => (a -> c) -> Tower tag a -> c
 liftA1disc f x = f (primal x)
 
 -- | The 'liftA2disc' function lifts a binary function with numeric
 -- inputs and discrete output from into the derivative tower domain.
-liftA2disc :: (Num a, Num b) => (a -> b -> c) -> Dual tag a -> Dual tag b -> c
+liftA2disc :: (Num a, Num b) => (a -> b -> c) -> Tower tag a -> Tower tag b -> c
 liftA2disc f x y = f (primal x) (primal y)
 
 -- | The 'liftLin' function lifts a linear scalar function from the
 -- primal domain into the derivative tower domain.  WARNING: the
 -- restriction to linear functions is not enforced by the type system.
-liftLin :: (a -> b) -> Dual tag a -> Dual tag b
+liftLin :: (a -> b) -> Tower tag a -> Tower tag b
 liftLin f = toTower . map f . fromTower
 
 -- Numeric operations on derivative towers.
 
-instance Num a => Num (Dual tag a) where
+instance Num a => Num (Tower tag a) where
     (Tower []) + y	= y
     x + (Tower [])	= x
     x + y = bundle (primal x + primal y) (tangentTower x + tangentTower y)
@@ -338,23 +338,23 @@ notComplex x = s == 0 || s == 1 || s == -1
 
 -- The following will not work:
 
--- instance Complex a => Complex (Dual tag a) where
+-- instance Complex a => Complex (Tower tag a) where
 --     realPart   = liftLin realPart
 --     imagPart   = liftLin imagPart
 --     conjugate  = liftLin conjugate
 --     ...
 
 -- This fails because Complex in the standard prelude is not abstract
--- enough.  It is impossible to make (Dual (Complex a)) a complex
--- number; the system can only do (Complex (Dual a)).  This makes it
+-- enough.  It is impossible to make (Tower (Complex a)) a complex
+-- number; the system can only do (Complex (Tower a)).  This makes it
 -- impossible to take derivatives of complex functions, i.e., analytic
 -- functions, using the same API as non-complex functions.
 
-instance Fractional a => Fractional (Dual tag a) where
+instance Fractional a => Fractional (Tower tag a) where
     recip		= liftA1_ recip (const . negate . (^2))
     fromRational	= lift . fromRational
 
-instance Floating a => Floating (Dual tag a) where
+instance Floating a => Floating (Tower tag a) where
     pi		= lift pi
     exp		= liftA1_ exp const
     sqrt	= liftA1_ sqrt (const . recip . (2*))
@@ -414,7 +414,7 @@ instance Floating a => Floating (Dual tag a) where
 
 -}
 
-instance (RealFloat a, RealFrac a) => RealFloat (Dual tag a) where
+instance (RealFloat a, RealFrac a) => RealFloat (Tower tag a) where
     floatRadix		= liftA1disc floatRadix
     floatDigits		= liftA1disc floatDigits
     floatRange	 	= liftA1disc floatRange
@@ -429,7 +429,7 @@ instance (RealFloat a, RealFrac a) => RealFloat (Dual tag a) where
     isIEEE		= liftA1disc isIEEE
     atan2		= liftA2 atan2 (\x y->let r = recip (x^2+y^2) in (y*r, -x*r))
 
-instance RealFrac a => RealFrac (Dual tag a) where
+instance RealFrac a => RealFrac (Tower tag a) where
     properFraction x = (z1, (bundle z2 (tangentTower x)))
         where (z1,z2) = properFraction (primal x)
     truncate	= liftA1disc truncate
@@ -437,16 +437,16 @@ instance RealFrac a => RealFrac (Dual tag a) where
     ceiling	= liftA1disc ceiling
     floor	= liftA1disc floor
 
-instance Real a => Real (Dual tag a) where
+instance Real a => Real (Tower tag a) where
     toRational	= liftA1disc toRational
 
-instance (Eq a, Num a) => Eq (Dual tag a) where
+instance (Eq a, Num a) => Eq (Tower tag a) where
     (==)	= liftA2disc (==)
 
-instance (Ord a, Num a) => Ord (Dual tag a) where
+instance (Ord a, Num a) => Ord (Tower tag a) where
     compare	= liftA2disc compare
 
-instance (Enum a, Num a) => Enum (Dual tag a) where
+instance (Enum a, Num a) => Enum (Tower tag a) where
     succ	= liftA1 succ (const 1)
     pred	= liftA1 pred (const 1)
     fromEnum	= liftA1disc fromEnum
@@ -486,51 +486,51 @@ Naming convention:
 
 -- | The 'diffUU' function calculates the first derivative of a
 -- scalar-to-scalar function.
-diffUU :: (Num a, Num b) => (forall tag. Dual tag a -> Dual tag b) -> a -> b
+diffUU :: (Num a, Num b) => (forall tag. Tower tag a -> Tower tag b) -> a -> b
 diffUU f = tangent . apply f
 
 -- | The 'diffUF' function calculates the first derivative of
 -- scalar-to-nonscalar function.
 diffUF :: (Num a, Num b, Functor f) =>
-          (forall tag. Dual tag a -> f (Dual tag b)) -> a -> f b
+          (forall tag. Tower tag a -> f (Tower tag b)) -> a -> f b
 diffUF f = fmap tangent . apply f
 
 -- | The 'diffMU' function calculate the product of the Jacobian of a
 -- nonscalar-to-scalar function with a given vector.  Aka: directional
 -- derivative.
 diffMU :: (Num a, Num b) =>
-          (forall tag. [Dual tag a] -> Dual tag b) -> [a] -> [a] -> b
+          (forall tag. [Tower tag a] -> Tower tag b) -> [a] -> [a] -> b
 diffMU f xs = tangent . f . zipWithBundle xs
 
 -- | The 'diffMF' function calculates the product of the Jacobian of a
 -- nonscalar-to-nonscalar function with a given vector.  Aka:
 -- directional derivative.
 diffMF :: (Num a, Num b, Functor f) =>
-          (forall tag. [Dual tag a] -> f (Dual tag b)) -> [a] -> [a] -> f b
+          (forall tag. [Tower tag a] -> f (Tower tag b)) -> [a] -> [a] -> f b
 diffMF f xs = fmap tangent . f . zipWithBundle xs
 
 
 -- | The 'diff2UU' function calculates the value and derivative, as a
 -- pair, of a scalar-to-scalar function.
-diff2UU :: (Num a, Num b) => (forall tag. Dual tag a -> Dual tag b) -> a -> (b,b)
+diff2UU :: (Num a, Num b) => (forall tag. Tower tag a -> Tower tag b) -> a -> (b,b)
 diff2UU f = dualToPair . apply f
 
 -- | The 'diffUF2' function calculates the value and derivative, as a
 -- pair, of a scalar-to-nonscalar function.
 diff2UF :: (Num a, Num b, Functor f) =>
-           (forall tag. Dual tag a -> f (Dual tag b)) -> a -> (f b, f b)
+           (forall tag. Tower tag a -> f (Tower tag b)) -> a -> (f b, f b)
 diff2UF f = fdualsToPair . apply f
 
 -- | The 'diffMU2' function calculates the value and directional
 -- derivative, as a pair, of a nonscalar-to-scalar function.
 diff2MU :: (Num a, Num b) =>
-           (forall tag. [Dual tag a] -> Dual tag b) -> [a] -> [a] -> (b,b)
+           (forall tag. [Tower tag a] -> Tower tag b) -> [a] -> [a] -> (b,b)
 diff2MU f xs = dualToPair . f . zipWithBundle xs
 
 -- | The 'diffMF2' function calculates the value and directional
 -- derivative, as a pair, of a nonscalar-to-nonscalar function.
 diff2MF :: (Num a, Num b, Functor f) =>
-           (forall tag. [Dual tag a] -> f (Dual tag b))
+           (forall tag. [Tower tag a] -> f (Tower tag b))
                -> [a] -> [a] -> (f b, f b)
 diff2MF f xs = fdualsToPair . f . zipWithBundle xs
 
@@ -587,13 +587,13 @@ Naming convention:
 -- | The 'diffsUU' function calculates a list of derivatives of a
 -- scalar-to-scalar function. The 0-th element of the list is the
 -- primal value, the 1-st element is the first derivative, etc.
-diffsUU :: (Num a, Num b) => (forall tag. Dual tag a -> Dual tag b) -> a -> [b]
+diffsUU :: (Num a, Num b) => (forall tag. Tower tag a -> Tower tag b) -> a -> [b]
 diffsUU f = fromTower . apply f
 
 -- | The 'diffsUF' function calculates an infinite list of derivatives
 -- of a scalar-to-nonscalar function.  The 0-th element of the list is
 -- the primal value, the 1-st element is the first derivative, etc.
-diffsUF :: (Num a, Num b, Functor f, Foldable f) => (forall tag. Dual tag a -> f (Dual tag b)) -> a -> [f b]
+diffsUF :: (Num a, Num b, Functor f, Foldable f) => (forall tag. Tower tag a -> f (Tower tag b)) -> a -> [f b]
 diffsUF f = transposePadF . fmap fromTower . apply f
 
 -- | The 'diffsMU' function calculates an infinite list of derivatives
@@ -601,7 +601,7 @@ diffsUF f = transposePadF . fmap fromTower . apply f
 -- the primal value, the 1-st element is the first derivative, etc.
 -- The input is a (possibly truncated) list of the primal, first
 -- derivative, etc, of the input.
-diffsMU :: (Num a, Num b) => (forall tag. [Dual tag a] -> Dual tag b) -> [[a]] -> [b]
+diffsMU :: (Num a, Num b) => (forall tag. [Tower tag a] -> Tower tag b) -> [[a]] -> [b]
 diffsMU f = fromTower . f . map toTower . transposePad
 
 -- | The 'diffsMF' function calculates an infinite list of derivatives
@@ -609,50 +609,50 @@ diffsMU f = fromTower . f . map toTower . transposePad
 -- is the primal value, the 1-st element is the first derivative, etc.
 -- The input is a (possibly truncated) list of the primal, first
 -- derivative, etc, of the input.
-diffsMF :: (Num a, Num b, Functor f, Foldable f) => (forall tag. [Dual tag a] -> f (Dual tag b)) -> [[a]] -> [f b]
+diffsMF :: (Num a, Num b, Functor f, Foldable f) => (forall tag. [Tower tag a] -> f (Tower tag b)) -> [[a]] -> [f b]
 diffsMF f = transposePadF . fmap fromTower . f . map toTower . transposePad
 
 -- Variants of diffsXX names diffs0XX, which zero-pad the output list
 
 -- | The 'diffs0UU' function is like 'diffsUU' except the output is zero padded.
-diffs0UU :: (Num a, Num b) => (forall tag. Dual tag a -> Dual tag b) -> a -> [b]
+diffs0UU :: (Num a, Num b) => (forall tag. Tower tag a -> Tower tag b) -> a -> [b]
 diffs0UU f = zeroPad . diffsUU f
 
 -- | The 'diffs0UF' function is like 'diffsUF' except the output is zero padded.
-diffs0UF :: (Num a, Num b, Functor f, Foldable f) => (forall tag. Dual tag a -> f (Dual tag b)) -> a -> [f b]
+diffs0UF :: (Num a, Num b, Functor f, Foldable f) => (forall tag. Tower tag a -> f (Tower tag b)) -> a -> [f b]
 diffs0UF f = zeroPadF . diffsUF f
 
 -- | The 'diffs0MU' function is like 'diffsMU' except the output is zero padded.
-diffs0MU :: (Num a, Num b) => (forall tag. [Dual tag a] -> Dual tag b) -> [[a]] -> [b]
+diffs0MU :: (Num a, Num b) => (forall tag. [Tower tag a] -> Tower tag b) -> [[a]] -> [b]
 diffs0MU f = zeroPad . diffsMU f
 
 -- | The 'diffs0MF' function is like 'diffsMF' except the output is zero padded.
-diffs0MF :: (Num a, Num b, Functor f, Foldable f) => (forall tag. [Dual tag a] -> f (Dual tag b)) -> [[a]] -> [f b]
+diffs0MF :: (Num a, Num b, Functor f, Foldable f) => (forall tag. [Tower tag a] -> f (Tower tag b)) -> [[a]] -> [f b]
 diffs0MF f = zeroPadF . diffsMF f
 
 -- Common access patterns
 
 -- | The 'diff' function is a synonym for 'diffUU'.
-diff :: (Num a, Num b) => (forall tag. Dual tag a -> Dual tag b) -> a -> b
+diff :: (Num a, Num b) => (forall tag. Tower tag a -> Tower tag b) -> a -> b
 diff = diffUU
 
 -- | The 'diff2' function is a synonym for 'diff2UU'.
-diff2 :: (Num a, Num b) => (forall tag. Dual tag a -> Dual tag b) -> a -> (b, b)
+diff2 :: (Num a, Num b) => (forall tag. Tower tag a -> Tower tag b) -> a -> (b, b)
 diff2 = diff2UU
 
 -- | The 'diffs' function is a synonym for 'diffsUU'.
-diffs :: (Num a, Num b) => (forall tag. Dual tag a -> Dual tag b) -> a -> [b]
+diffs :: (Num a, Num b) => (forall tag. Tower tag a -> Tower tag b) -> a -> [b]
 diffs = diffsUU
 
 -- | The 'diffs0' function is a synonym for 'diffs0UU'.
-diffs0 :: (Num a, Num b) => (forall tag. Dual tag a -> Dual tag b) -> a -> [b]
+diffs0 :: (Num a, Num b) => (forall tag. Tower tag a -> Tower tag b) -> a -> [b]
 diffs0 = diffs0UU
 
 -- | The 'grad' function calculates the gradient of a
 -- nonscalar-to-scalar function, using n invocations of forward AD,
 -- where n is the input dimmensionality.  NOTE: this is O(n)
 -- inefficient as compared to reverse AD.
-grad :: (Num a, Num b) => (forall tag. [Dual tag a] -> Dual tag b) -> [a] -> [b]
+grad :: (Num a, Num b) => (forall tag. [Tower tag a] -> Tower tag b) -> [a] -> [b]
 -- grad f = head . jacobian ((:[]) . f) -- Robot face, robot claw!
 grad f xs = map (diffMU f xs) (identity xs)
 
@@ -660,25 +660,25 @@ grad f xs = map (diffMU f xs) (identity xs)
 -- nonscalar-to-nonscalar function, using n invocations of forward AD,
 -- where n is the input dimmensionality.
 jacobian :: (Num a, Num b) =>
-            (forall tag. [Dual tag a] -> [Dual tag b]) -> [a] -> [[b]]
+            (forall tag. [Tower tag a] -> [Tower tag b]) -> [a] -> [[b]]
 jacobian f xs = transpose $ map (diffMF f xs) (identity xs)
 
 -- | The 'dualToPair' function converts a tower of derivatives to a
 -- pair of the primal and the first derivative.
-dualToPair :: Num a => Dual tag a -> (a,a)
+dualToPair :: Num a => Tower tag a -> (a,a)
 dualToPair x = (primal x, tangent x)
 
 -- | The 'fdualsToPair' function converts a functor of derivative
 -- towers to a pair: one with the functor holding the primal values,
 -- the other with the functor holding the first derivatives.
-fdualsToPair :: (Num a, Functor f) => f (Dual tag a) -> (f a, f a)
+fdualsToPair :: (Num a, Functor f) => f (Tower tag a) -> (f a, f a)
 fdualsToPair fxs = (fmap primal fxs, fmap tangent fxs)
 
 -- | The 'zipWithBundle' function zip two lists of numbers into a list
 -- of derivative towers with the given primal values andd first
 -- derivatives.  Like @zipWith Bundle@ except that the two lists
 -- should be the same length.
-zipWithBundle :: Num a => [a] -> [a] -> [Dual tag a]
+zipWithBundle :: Num a => [a] -> [a] -> [Tower tag a]
 zipWithBundle [] [] = []
 zipWithBundle (x:xs) (y:ys) = (bundle x (lift y)):(zipWithBundle xs ys)
 zipWithBundle _ _ = error "zipWithBundle arguments, lengths differ"
@@ -687,25 +687,25 @@ zipWithBundle _ _ = error "zipWithBundle arguments, lengths differ"
 -- function in the primal domain, where the function is
 -- scalar-to-scalar.
 lowerUU :: (Num a, Num b) =>
-           (forall tag. Dual tag a -> Dual tag b) -> a -> b
+           (forall tag. Tower tag a -> Tower tag b) -> a -> b
 lowerUU f = primal . f . lift
 
 -- | The 'lowerUF' function lowers a function over dual numbers to a
 -- function over primals, where the function is scalar-to-nonscalar.
 lowerUF :: (Num a, Num b, Functor fb) =>
-            (forall tag. Dual tag a -> fb (Dual tag b)) -> a -> (fb b)
+            (forall tag. Tower tag a -> fb (Tower tag b)) -> a -> (fb b)
 lowerUF f = fmap primal . f . lift
 
 -- | The 'lowerFU' function lowers a function over dual numbers to a
 -- function over primals where the function is nonscalar-to-scalar.
 lowerFU :: (Num a, Num b, Functor fa) =>
-           (forall tag. fa (Dual tag a) -> Dual tag b) -> (fa a) -> b
+           (forall tag. fa (Tower tag a) -> Tower tag b) -> (fa a) -> b
 lowerFU f = primal . f . fmap lift
 
 -- | The 'lowerFF' function lowers a function over dual numbers to a
 -- function over primals where the function is nonscalar-to-nonscalar.
 lowerFF :: (Num a, Num b, Functor fa, Functor fb) =>
-           (forall tag. fa (Dual tag a) -> fb (Dual tag b))
+           (forall tag. fa (Tower tag a) -> fb (Tower tag b))
                -> (fa a) -> (fb b)
 lowerFF f = fmap primal . f . fmap lift
 
@@ -729,7 +729,7 @@ show2d = ("["++) . (++"]\n") . (foldl1 $ (++) . (++"\n ")) . map show
 -- list of increasingly higher-order approximations.
 --
 -- EXAMPLE: @taylor exp 0 1@
-taylor :: Fractional a => (forall tag. Dual tag a -> Dual tag a) -> a -> a -> [a]
+taylor :: Fractional a => (forall tag. Tower tag a -> Tower tag a) -> a -> a -> [a]
 
 taylor f x dx = snd
                 $ mapAccumL (\a x -> app2 (,) $ a+x) 0
@@ -760,7 +760,7 @@ taylor f x dx = snd
 --  @take 10 $ zeroNewton ((+1).(^2)) (1 :+ 1)  -- converge to (0 :+ 1)@
 --
 zeroNewton :: Fractional a =>
-              (forall tag. Dual tag a -> Dual tag a) -> a -> [a]
+              (forall tag. Tower tag a -> Tower tag a) -> a -> [a]
 zeroNewton f x0 = iterate (\x -> let (y,y') = diff2UU f x in x - y/y') x0
 
 -- | The 'inverseNewton' function inverts a scalar function using
@@ -771,7 +771,7 @@ zeroNewton f x0 = iterate (\x -> let (y,y') = diff2UU f x in x - y/y') x0
 --   @take 10 $ inverseNewton sqrt 1 (sqrt 10)  -- converge to 10@
 --
 inverseNewton :: Fractional a =>
-                 (forall tag. Dual tag a -> Dual tag a)
+                 (forall tag. Tower tag a -> Tower tag a)
                      -> a -> a -> [a]
 inverseNewton f x0 y = zeroNewton (\x -> (f x) - (lift y)) x0
 
@@ -779,7 +779,7 @@ inverseNewton f x0 y = zeroNewton (\x -> (f x) - (lift y)) x0
 -- function using Newton's method; its output is a stream of
 -- increasingly accurate results.  (Modulo the usual caveats.)
 fixedPointNewton :: Fractional a =>
-                    (forall tag. Dual tag a -> Dual tag a) -> a -> [a]
+                    (forall tag. Tower tag a -> Tower tag a) -> a -> [a]
 fixedPointNewton f x0 = zeroNewton (\x -> (f x) - x) x0
 
 -- | The 'extremumNewton' function finds an extremum of a scalar
@@ -787,7 +787,7 @@ fixedPointNewton f x0 = zeroNewton (\x -> (f x) - x) x0
 -- accurate results.  (Modulo the usual caveats.)
 extremumNewton :: Fractional a =>
                   (forall tag. forall tag1.
-                          Dual tag1 (Dual tag a) -> Dual tag1 (Dual tag a))
+                          Tower tag1 (Tower tag a) -> Tower tag1 (Tower tag a))
                       -> a -> [a]
 extremumNewton f x0 = zeroNewton (diffUU f) x0
 
@@ -799,7 +799,7 @@ extremumNewton f x0 = zeroNewton (diffUU f) x0
 -- gradient is calculated using Forward AD, which is O(n) inefficient
 -- as compared to Reverse AD, where n is the input dimensionality.
 argminNaiveGradient :: (Fractional a, Ord a) =>
-                       (forall tag. [Dual tag a] -> Dual tag a)
+                       (forall tag. [Tower tag a] -> Tower tag a)
                            -> [a] -> [[a]]
 argminNaiveGradient f x0 =
     let
@@ -834,7 +834,7 @@ constant_one x = diffUU (\y -> x + y) 1 -- fails type check w/ tags
 
 -- Higher-Order derivatives via nesting, fails type check
 
-ds :: (forall tag. Dual tag a -> Dual tag b) -> a -> [b]
+ds :: (forall tag. Tower tag a -> Tower tag b) -> a -> [b]
 
 ds f x = y:(ds (diffUU f) x)
     where (y,y') = diff2UU f x
