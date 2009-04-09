@@ -80,7 +80,7 @@ module Numeric.FAD (
             primalUU, primalUF, primalFU, primalFF,
 
             -- * Miscellaneous
-            taylor)
+            taylor, taylor2)
 where
 
 import Data.List (transpose, mapAccumL)
@@ -744,6 +744,21 @@ taylor f x dx = snd
       powers x		= iterate (*x) 1
       recipFactorials	= snd $ mapAccumL (\a i -> (a/fromIntegral i, a)) 1 [1..]
       app2 f x		= f x x
+
+-- | The 'taylor2' function evaluates a two-dimensional Taylor series
+-- of the given function.  This is calculated by nested application of
+-- the 'taylor' function, and the exported signature reflects this.
+
+taylor2 :: Fractional a =>
+      (forall tag0 tag.
+              Tower tag0 (Tower tag a) -> Tower tag0 (Tower tag a) -> Tower tag0 (Tower tag a))
+          -> a -> a -> a -> a -> [[a]]
+
+taylor2 f x y dx dy =
+    [taylor (\y -> taylor (flip f (lift y)) (lift x) (lift dx) !! ix)
+            y dy
+     | ix <- map fst $ zip [0..] rowsListLen]
+    where rowsListLen = taylor (primalUU (flip f (lift (lift y)))) x dx
 
 -- Optimization Routines
 
