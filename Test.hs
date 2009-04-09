@@ -1,6 +1,7 @@
 import Numeric.FAD
 import Data.Complex
 import Test.QuickCheck
+import Data.Function (on)
 
 
 -- Test only once, useful for properties with no parameters (could use
@@ -25,8 +26,8 @@ infix 4 ~~=
 
 
 -- Type signatures are supplied when QuickCheck is otherwise unable to
--- infer the type of the properties arguments. An alternative way of
--- providing the type information would be e.g.:
+-- infer the type of the property's arguments.  An alternative way of
+-- providing the type information would be, e.g.:
 --
 --   prop_constant_one x y = diffUU (\y -> lift x + y) y == (1 :: Double)
 --
@@ -71,10 +72,38 @@ prop_diffs_4 =
     (take 20 $ diffs0UF ((:[]) . (^5)) 1)
     == [[1],[5],[20],[60],[120],[120],[0],[0],[0],[0],[0],[0],[0],[0],[0],[0],[0],[0],[0],[0]]
 
--- @taylor@ test cases:
-prop_taylor_sin  i x = sin x ~= taylor sin 0 x !! i
-prop_taylor_sin' :: Int -> Double -> Property
-prop_taylor_sin' i x = abs x < 2*pi ==> prop_taylor_sin i x
+-- List indexing which sticks with the last element when it runs off the end.
+
+(!!~) :: [a] -> Int -> a
+(!!~) xs =  (!!) (xs ++ repeat (last xs))
+
+-- General routines for testing Taylor series accuracy
+
+taylor_accurate :: (Ord a, Fractional a) => (forall tag. Tower tag a -> Tower tag a) -> Int -> a -> a -> Bool
+
+taylor_accurate f n x dx = s !! 0 ~= f0 x &&
+                       s !!~ n ~= f0 (x+dx)
+    where s = taylor f x dx
+          f0 = primalUU f
+
+taylor_accurate_p :: (forall tag. Tower tag Double -> Tower tag Double) ->
+                 Int -> Double -> Double -> Double -> Double -> Property
+
+taylor_accurate_p f n dLo dHi x d =
+    dLo <= d && d <= dHi ==> taylor_accurate f n x d
+
+taylor2_accurate  :: (Ord a, Fractional a) =>
+                  (forall tag0 tag. Tower tag0 (Tower tag a) -> Tower tag0 (Tower tag a) -> Tower tag0 (Tower tag a))
+                      -> Int -> Int -> a -> a -> a -> a -> Bool
+
+taylor2_accurate f nx ny x y dx dy =
+    let
+        s2 = taylor2 f x y dx dy
+        f2 x y = primal $ primal $ on f (lift . lift) x y
+    in
+      f2 x y ~= s2 !! 0 !! 0
+            &&
+      f2 (x+dx) (y+dy) ~= s2 !! nx !! ny
 
 -- Test all properties.
 main = do
@@ -89,10 +118,26 @@ main = do
   onceCheck  prop_inverseNewton
   quickCheck prop_atan2_shouldBeOne
   onceCheck  $ prop_atan2_shouldBeOne (pi/2)
-  onceCheck  $ prop_taylor_sin  40 (2*pi)
-  quickCheck $ prop_taylor_sin' 40
   onceCheck prop_diffs_1
   onceCheck prop_diffs_2
   onceCheck prop_diffs_3
   onceCheck prop_diffs_4
   onceCheck  $ prop_diffs_5 1024
+  quickCheck $ \x -> taylor_accurate_p (+(lift x))         1 (-1e9) 1e9
+  quickCheck $ \x -> taylor_accurate_p ((lift x)+)         1 (-1e9) 1e9
+  quickCheck $ \x -> taylor_accurate_p (flip (-) (lift x)) 1 (-1e9) 1e9
+  quickCheck $ \x -> taylor_accurate_p ((lift x)-)         1 (-1e9) 1e9
+  quickCheck $ \x -> taylor_accurate_p (*(lift x))         1 (-1e9) 1e9
+  quickCheck $ \x -> taylor_accurate_p ((lift x)*)         1 (-1e9) 1e9
+  quickCheck $ taylor_accurate_p abs 1 (-1) 1e9 1
+  quickCheck $ taylor_accurate_p abs 1 (-1e9) 1 (-1)
+  quickCheck $ taylor_accurate_p recip 12 (-100) 100 200
+  quickCheck $ taylor_accurate_p recip 12 (-100) 100 (-200)
+  quickCheck $ taylor_accurate_p negate 1 (-1e9) 1e9
+  quickCheck $ taylor_accurate_p exp 40 (-4) 4
+  onceCheck  $ taylor_accurate   sin 40 0 (2*pi)
+  quickCheck $ taylor_accurate_p sin 40 (-2.5*pi) (2.5*pi)
+  quickCheck $ taylor_accurate_p sqrt 10 (-1) 1 10
+  quickCheck $ taylor_accurate_p log 10 (-1) 1 (exp 2)
+  quickCheck $ taylor_accurate_p (**2.5) 12 (-0.5) 1 3
+  quickCheck $ taylor_accurate_p (2.5**) 12 (-0.5) 1 3
