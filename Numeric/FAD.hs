@@ -189,13 +189,7 @@ apply = (. flip bundle 1)
 -- | tower, where the 0-th element is the primal value, the 1-st
 -- | element is the first derivative, etc.
 towerElt :: Num a => Int -> Tower tag a -> a
-towerElt i (Tower xs) = xs !!! i
-
-[] !!! i = if i<0
-           then error "negative index"
-           else 0
-(x0:xs) !!! 0 = x0
-(x0:xs) !!! i = xs !!! (i-1)
+towerElt i (Tower xs) = zeroPad xs !! i
 
 -- | The 'fromTower' function converts a dual number tower to a list
 -- of values with the i-th derivatives, i=0,1,..., possibly truncated
@@ -553,11 +547,17 @@ zeroPadF fxs@(fx:_) = fxs ++ repeat (fmap (const 0) fx)
 -- the output are nonincreasing.
 
 transposePad :: Num a => [[a]] -> [[a]]
-transposePad [] = []
-transposePad (xs:xss) = glom xs (transposePad xss)
-    where glom xs [] = map (:[]) xs
-          glom [] xss = map (0:) xss
-          glom (x0:xs) (xss0:xss) = (x0:xss0):(glom xs xss)
+transposePad = foldr (zipWithDefaults (:) 0 []) []
+
+-- | The 'zipWithDefaults' function is like zipWith except that it
+-- continues until both lists are exhausted, filling in any missing
+-- elements with the given defaults.
+
+zipWithDefaults :: (a -> b -> c) -> a -> b -> [a] -> [b] -> [c]
+zipWithDefaults f x0 y0 [] [] = []
+zipWithDefaults f x0 y0 xs [] = map (flip f y0) xs
+zipWithDefaults f x0 y0 [] ys = map (f x0) ys
+zipWithDefaults f x0 y0 (x:xs) (y:ys) = f x y:zipWithDefaults f x0 y0 xs ys
 
 -- | The 'transposePadF' function is like Data.List.transpose except
 -- that it fills in missing elements with 0 rather than skipping them,
@@ -568,7 +568,7 @@ transposePadF :: (Num a, Foldable f, Functor f) => f [a] -> [f a]
 transposePadF fx =
     if Data.Foldable.all null fx
     then []
-    else (fmap (!!! 0) fx) : (transposePadF (fmap (drop 1) fx))
+    else (fmap ((!!0) . zeroPad) fx) : (transposePadF (fmap (drop 1) fx))
 
 -- The 'transposeF' function transposes w/ infinite zero row padding.
 
