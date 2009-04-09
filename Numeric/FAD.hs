@@ -247,7 +247,7 @@ liftA2 :: Num a =>
 
 liftA2 f = (liftA2_ f) . const
 
--- | The 'liftA1_' funciton lifts a scalar numeric function, like
+-- | The 'liftA1_' function lifts a scalar numeric function, like
 -- 'liftA1', except the the derivative function is given access to the
 -- output value.  This eases recursion and reuse.
 --
@@ -260,7 +260,7 @@ liftA1_ :: Num a =>
 liftA1_ f df x = z
     where z = bundle (f (primal x)) (tangentTower x * df z x)
 
--- | The 'liftA2_' funciton lifts a binary numeric function, like
+-- | The 'liftA2_' function lifts a binary numeric function, like
 -- 'liftA2', except the the derivative function is given access to the
 -- output value.  This eases recursion and reuse.
 --
