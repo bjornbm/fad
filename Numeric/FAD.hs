@@ -57,7 +57,7 @@ tagging to allow dynamic nesting, if the type system would allow.
 -- Forward Automatic Differentiation
 module Numeric.FAD (
             -- * Higher-Order Generalized Dual Numbers
-            Tower, lift,
+            Tower, lift, primal,
 
             -- * First-Order Differentiation Operators
             -- $fodo
@@ -75,6 +75,9 @@ module Numeric.FAD (
             -- * Optimization Routines
             zeroNewton, inverseNewton, fixedPointNewton, extremumNewton,
             argminNaiveGradient,
+
+            -- * unlift lifted functions
+            primalUU, primalUF, primalFU, primalFF,
 
             -- * Miscellaneous
             taylor)
@@ -683,31 +686,31 @@ zipWithBundle [] [] = []
 zipWithBundle (x:xs) (y:ys) = (bundle x (lift y)):(zipWithBundle xs ys)
 zipWithBundle _ _ = error "zipWithBundle arguments, lengths differ"
 
--- | The 'lowerUU' function lowers a function over dual numbers to a
+-- | The 'primalUU' function lowers a function over dual numbers to a
 -- function in the primal domain, where the function is
 -- scalar-to-scalar.
-lowerUU :: (Num a, Num b) =>
+primalUU :: (Num a, Num b) =>
            (forall tag. Tower tag a -> Tower tag b) -> a -> b
-lowerUU f = primal . f . lift
+primalUU f = primal . f . lift
 
--- | The 'lowerUF' function lowers a function over dual numbers to a
+-- | The 'primalUF' function lowers a function over dual numbers to a
 -- function over primals, where the function is scalar-to-nonscalar.
-lowerUF :: (Num a, Num b, Functor fb) =>
+primalUF :: (Num a, Num b, Functor fb) =>
             (forall tag. Tower tag a -> fb (Tower tag b)) -> a -> (fb b)
-lowerUF f = fmap primal . f . lift
+primalUF f = fmap primal . f . lift
 
--- | The 'lowerFU' function lowers a function over dual numbers to a
+-- | The 'primalFU' function lowers a function over dual numbers to a
 -- function over primals where the function is nonscalar-to-scalar.
-lowerFU :: (Num a, Num b, Functor fa) =>
+primalFU :: (Num a, Num b, Functor fa) =>
            (forall tag. fa (Tower tag a) -> Tower tag b) -> (fa a) -> b
-lowerFU f = primal . f . fmap lift
+primalFU f = primal . f . fmap lift
 
--- | The 'lowerFF' function lowers a function over dual numbers to a
+-- | The 'primalFF' function lowers a function over dual numbers to a
 -- function over primals where the function is nonscalar-to-nonscalar.
-lowerFF :: (Num a, Num b, Functor fa, Functor fb) =>
+primalFF :: (Num a, Num b, Functor fa, Functor fb) =>
            (forall tag. fa (Tower tag a) -> fb (Tower tag b))
                -> (fa a) -> (fb b)
-lowerFF f = fmap primal . f . fmap lift
+primalFF f = fmap primal . f . fmap lift
 
 -- | The 'identity' function makes an identity matrix, represented as
 -- list of lists of numbers.  The dimensionality is taken from the
@@ -808,7 +811,7 @@ argminNaiveGradient f x0 =
             -- should check gx = 0 here
             let
                 x1 = zipWith (+) x (map ((-eta)*) gx)
-                fx1 = lowerFU f x1
+                fx1 = primalFU f x1
                 gx1 = gf x1
             in
               if eta == 0 then []
@@ -819,7 +822,7 @@ argminNaiveGradient f x0 =
                                  then loop x1 fx1 gx1 (eta*2) 0
                                  else loop x1 fx1 gx1 eta (i+1))
     in
-      loop x0 (lowerFU f x0) (gf x0) 0.1 0
+      loop x0 (primalFU f x0) (gf x0) 0.1 0
 
 -- BUGS!  BUGS!  BUGS!  Or, test cases.
 
