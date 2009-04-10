@@ -1,3 +1,6 @@
+{-# LANGUAGE Rank2Types          #-}
+{-# LANGUAGE TypeOperators       #-}
+
 import Numeric.FAD
 import Data.Complex
 import Test.QuickCheck
