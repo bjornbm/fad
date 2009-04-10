@@ -83,7 +83,7 @@ module Numeric.FAD (
             taylor, taylor2)
 where
 
-import Data.List (transpose, mapAccumL)
+import Data.List (transpose)
 import Data.Foldable (Foldable)
 import qualified Data.Foldable (all)
 import List.Uttl (zipWithDefaults)
@@ -725,16 +725,14 @@ show2d = ("["++) . (++"]\n") . (foldl1 $ (++) . (++"\n ")) . map show
 -- EXAMPLE: @taylor exp 0 1@
 taylor :: Fractional a => (forall tag. Tower tag a -> Tower tag a) -> a -> a -> [a]
 
-taylor f x dx = snd
-                $ mapAccumL (\a x -> app2 (,) $ a+x) 0
-                      $ zipWith3 (\x y z -> x*y*z)
-                            (diffsUU f x)
-                            recipFactorials
-                            (powers dx)
+taylor f x dx = scanl1 (+)
+                $ zipWith3 (\x y z -> x*y*z)
+                      (diffsUU f x)
+                      recipFactorials
+                      (powers dx)
     where
       powers x		= iterate (*x) 1
-      recipFactorials	= snd $ mapAccumL (\a i -> (a/fromIntegral i, a)) 1 [1..]
-      app2 f x		= f x x
+      recipFactorials	= scanl (/) 1 $ map fromIntegral [1..]
 
 -- | The 'taylor2' function evaluates a two-dimensional Taylor series
 -- of the given function.  This is calculated by nested application of
@@ -742,7 +740,9 @@ taylor f x dx = snd
 
 taylor2 :: Fractional a =>
       (forall tag0 tag.
-              Tower tag0 (Tower tag a) -> Tower tag0 (Tower tag a) -> Tower tag0 (Tower tag a))
+              Tower tag0 (Tower tag a)
+                  -> Tower tag0 (Tower tag a)
+                  -> Tower tag0 (Tower tag a))
           -> a -> a -> a -> a -> [[a]]
 
 taylor2 f x y dx dy =
