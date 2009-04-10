@@ -23,7 +23,7 @@ nearbyHybrid   accuracy x1 x2 = abs (x1 - x2) < accuracy * maximum (map abs [x1,
 infix 4 ~=
 
 (~~=) :: (Fractional t, Ord t) => [t] -> [t] -> Bool
-(~~=) xs ys = and $ zipWithDefaults (~=) notNumber notNumber xs ys
+(~~=) = ((.).(.)) and $ zipWithDefaults (~=) notNumber notNumber
     where notNumber = 0/0
 infix 4 ~~=
 
@@ -99,10 +99,12 @@ prop_diffs_4 =
 
 -- General routines for testing Taylor series accuracy
 
-taylor_accurate :: (Ord a, Fractional a) => (forall tag. Tower tag a -> Tower tag a) -> Int -> a -> a -> Bool
+taylor_accurate :: (Ord a, Fractional a) =>
+                   (forall tag. Tower tag a -> Tower tag a)
+                       -> Int -> a -> a -> Bool
 
-taylor_accurate f n x dx = s !! 0 ~= f0 x &&
-                       s !!~ n ~= f0 (x+dx)
+taylor_accurate f n x dx = s !!~ 0 ~= f0 x &&
+                           s !!~ n ~= f0 (x+dx)
     where s = taylor f x dx
           f0 = primalUU f
 
@@ -113,7 +115,10 @@ taylor_accurate_p f n dLo dHi x d =
     dLo <= d && d <= dHi ==> taylor_accurate f n x d
 
 taylor2_accurate  :: (Ord a, Fractional a) =>
-                  (forall tag0 tag. Tower tag0 (Tower tag a) -> Tower tag0 (Tower tag a) -> Tower tag0 (Tower tag a))
+                  (forall tag0 tag.
+                          Tower tag0 (Tower tag a)
+                              -> Tower tag0 (Tower tag a)
+                              -> Tower tag0 (Tower tag a))
                       -> Int -> Int -> a -> a -> a -> a -> Bool
 
 taylor2_accurate f nx ny x y dx dy =
