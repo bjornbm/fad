@@ -87,6 +87,7 @@ import Data.List (transpose)
 import Data.Foldable (Foldable)
 import qualified Data.Foldable (all)
 import List.Uttl (zipWithDefaults)
+import Data.Function (on)
 
 -- To Do:
 
@@ -163,7 +164,7 @@ newtype Tower tag a = Tower [a] deriving Show
 -- dual numbers, with a zero tower.  If dual numbers were a monad,
 -- 'lift' would be 'return'.
 lift :: Num a => a -> Tower tag a
-lift = flip bundle zero
+lift = (`bundle` zero)
 
 -- | The 'bundle' function takes a primal number and a dual number
 -- tower and returns a dual number tower with the given tower shifted
@@ -184,7 +185,7 @@ zero = toTower []
 -- thus calculating the generalized push-forward, in the differential
 -- geometric sense, of the given function at the given point.
 apply :: Num a => (Tower tag a -> b) -> a -> b
-apply = (. flip bundle 1)
+apply = (. (`bundle` 1))
 
 -- | The 'towerElt' function finds the i-th element of a dual number
 -- | tower, where the 0-th element is the primal value, the 1-st
@@ -287,8 +288,8 @@ liftA1disc f x = f (primal x)
 
 -- | The 'liftA2disc' function lifts a binary function with numeric
 -- inputs and discrete output from into the derivative tower domain.
-liftA2disc :: (Num a, Num b) => (a -> b -> c) -> Tower tag a -> Tower tag b -> c
-liftA2disc f x y = f (primal x) (primal y)
+liftA2disc :: (Num a) => (a -> a -> b) -> Tower tag a -> Tower tag a -> b
+liftA2disc = (`on` primal)
 
 -- | The 'liftLin' function lifts a linear scalar function from the
 -- primal domain into the derivative tower domain.  WARNING: the

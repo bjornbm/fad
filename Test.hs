@@ -23,7 +23,7 @@ nearbyHybrid   accuracy x1 x2 = abs (x1 - x2) < accuracy * maximum (map abs [x1,
 infix 4 ~=
 
 (~~=) :: (Fractional t, Ord t) => [t] -> [t] -> Bool
-xs ~~= ys = foldl (&&) True $ zipWithDefaults (~=) notNumber notNumber xs ys
+(~~=) xs ys = and $ zipWithDefaults (~=) notNumber notNumber xs ys
     where notNumber = 0/0
 infix 4 ~~=
 
