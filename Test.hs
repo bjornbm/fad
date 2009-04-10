@@ -2,6 +2,7 @@ import Numeric.FAD
 import Data.Complex
 import Test.QuickCheck
 import Data.Function (on)
+import List.Uttl (zipWithDefaults, (!!~))
 
 
 -- Test only once, useful for properties with no parameters (could use
@@ -19,9 +20,8 @@ nearbyHybrid   accuracy x1 x2 = abs (x1 - x2) < accuracy * maximum (map abs [x1,
 infix 4 ~=
 
 (~~=) :: (Fractional t, Ord t) => [t] -> [t] -> Bool
-(~~=) [] [] = True
-(~~=) (x:xs) (y:ys) = x ~= y && xs ~~= ys
-(~~=) _ _ = False
+xs ~~= ys = foldl (&&) True $ zipWithDefaults (~=) notNumber notNumber xs ys
+    where notNumber = 0/0
 infix 4 ~~=
 
 
@@ -32,7 +32,7 @@ infix 4 ~~=
 --   prop_constant_one x y = diffUU (\y -> lift x + y) y == (1 :: Double)
 --
 
--- Test cases copied from end of Numeric/FAD.hs.
+-- Nesting with @lift@ and @diffUU@ test cases.
 prop_is1, prop_is2 :: Double -> Bool
 prop_is1 x = diffUU (\x ->    diffUU ((lift x)*) 2)  x == 1
 prop_is2 x = diffUU (\x -> x*(diffUU ((lift x)*) 2)) x == 2 * x
@@ -40,10 +40,13 @@ prop_is2 x = diffUU (\x -> x*(diffUU ((lift x)*) 2)) x == 2 * x
 prop_constant_one :: Double -> Double -> Bool
 prop_constant_one x y = diffUU (\y -> lift x + y) y == 1
 
-prop_diffMF_1 = diffMF (\xs -> [sum (zipWith (*) xs [1..5])]) [1,1,1,1,1] (map (10^) [0..4]) == [54321]
-prop_diffMF_2 = diffMF id [10..14] [0..4] == [0,1,2,3,4]
-prop_jacobian = jacobian (\xs->[sum xs,product xs,log $ product $ map (sqrt . (^2) . exp) xs]) [1..5]
-             == [[1,1,1,1,1],[120,60,40,30,24],[1,1,1,1,1]]
+-- @jacobian@ test cases.
+prop_jacobian = jacobian (\xs -> [sum xs,
+                                  product xs,
+                                  log $ product $ map (sqrt . (^2) . exp) xs])
+                [1..5] == [[1,1,1,1,1],
+                           [120,60,40,30,24],
+                           [1,1,1,1,1]]
 
 -- @zeroNewton@ test cases.
 prop_zeroNewton_1 = zeroNewton (\x->x^2-4) 1 !! 10 ~= 2
@@ -56,26 +59,40 @@ prop_inverseNewton = inverseNewton sqrt 1 (sqrt 10) !! 10 == 10
 prop_atan2_shouldBeOne :: Double -> Bool
 prop_atan2_shouldBeOne a = diff (\a->atan2 (sin a) (cos a)) a ~= 1
 
+-- @diffMF@ test cases.
+prop_diffMF_1 = diffMF (\xs -> [sum (zipWith (*) xs [1..5])])
+                [1,1,1,1,1] (map (10^) [0..4])
+                == [54321]
+
+prop_diffMF_2 = diffMF id [10..14] [0..4] == [0..4]
+
+-- @diffMU@ test cases.
+prop_diffMU_1 = diffMU (\xs -> sum (zipWith (*) xs [1..5]))
+                [1,1,1,1,1] (map (10^) [0..4])
+                == 54321
 
 -- @diffsUU@ test cases.
 prop_diffs_1 = (diffsUU (^5) 1) == [1,5,20,60,120,120]
-prop_diffs_5 n = map (2^) [0..n-1] ~~= take n (diffsUU (exp . (2*)) 0)
+
+prop_diffs_5 n =
+    on (~~=) (take n)
+           (map (2^) [0..])
+           (diffsUU (exp . (2*)) 0)
 
 -- @diffs0UU@ test cases:
-prop_diffs_2 = (take 20 $ diffs0UU (^5) 1) == [1,5,20,60,120,120,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
+prop_diffs_2 =
+    on (==) (take 20)
+           (diffs0UU (^5) 1)
+           ([1,5,20,60,120,120] ++ repeat 0)
 
 -- @diffsUF@ test cases:
 prop_diffs_3 = (diffsUF ((:[]) . (^5)) 1) == [[1],[5],[20],[60],[120],[120]]
 
 -- @diffs0UF@ test cases:
 prop_diffs_4 =
-    (take 20 $ diffs0UF ((:[]) . (^5)) 1)
-    == [[1],[5],[20],[60],[120],[120],[0],[0],[0],[0],[0],[0],[0],[0],[0],[0],[0],[0],[0],[0]]
-
--- List indexing which sticks with the last element when it runs off the end.
-
-(!!~) :: [a] -> Int -> a
-(!!~) xs =  (!!) (xs ++ repeat (last xs))
+    on (==) (take 20) 
+           (diffs0UF ((:[]) . (^5)) 1)
+           ([[1],[5],[20],[60],[120],[120]] ++ repeat [0])
 
 -- General routines for testing Taylor series accuracy
 
@@ -112,6 +129,7 @@ main = do
   quickCheck prop_constant_one
   onceCheck  prop_diffMF_1
   onceCheck  prop_diffMF_2
+  onceCheck  prop_diffMU_1
   onceCheck  prop_jacobian
   onceCheck  prop_zeroNewton_1
   onceCheck  prop_zeroNewton_2

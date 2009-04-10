@@ -86,6 +86,7 @@ where
 import Data.List (transpose, mapAccumL)
 import Data.Foldable (Foldable)
 import qualified Data.Foldable (all)
+import List.Uttl (zipWithDefaults)
 
 -- To Do:
 
@@ -548,16 +549,6 @@ zeroPadF fxs@(fx:_) = fxs ++ repeat (fmap (const 0) fx)
 
 transposePad :: Num a => [[a]] -> [[a]]
 transposePad = foldr (zipWithDefaults (:) 0 []) []
-
--- | The 'zipWithDefaults' function is like zipWith except that it
--- continues until both lists are exhausted, filling in any missing
--- elements with the given defaults.
-
-zipWithDefaults :: (a -> b -> c) -> a -> b -> [a] -> [b] -> [c]
-zipWithDefaults f x0 y0 [] [] = []
-zipWithDefaults f x0 y0 xs [] = map (flip f y0) xs
-zipWithDefaults f x0 y0 [] ys = map (f x0) ys
-zipWithDefaults f x0 y0 (x:xs) (y:ys) = f x y:zipWithDefaults f x0 y0 xs ys
 
 -- | The 'transposePadF' function is like Data.List.transpose except
 -- that it fills in missing elements with 0 rather than skipping them,
