@@ -17,4 +17,5 @@ Category:            Math
 Build-Type:          Simple
 Build-Depends:       base
 Exposed-Modules:     Numeric.FAD
+Other-Modules:       List.Uttl
 Extra-source-files:  README, Test.hs
