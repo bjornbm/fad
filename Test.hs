@@ -157,8 +157,8 @@ main = do
   quickCheck $ \x -> taylor_accurate_p ((lift x)*)         1 (-1e9) 1e9
   quickCheck $ taylor_accurate_p abs 1 (-1) 1e9 1
   quickCheck $ taylor_accurate_p abs 1 (-1e9) 1 (-1)
-  quickCheck $ taylor_accurate_p recip 12 (-100) 100 200
-  quickCheck $ taylor_accurate_p recip 12 (-100) 100 (-200)
+  quickCheck $ taylor_accurate_p recip 12 (-50) 50 200
+  quickCheck $ taylor_accurate_p recip 12 (-50) 50 (-200)
   quickCheck $ taylor_accurate_p negate 1 (-1e9) 1e9
   quickCheck $ taylor_accurate_p exp 40 (-4) 4
   onceCheck  $ taylor_accurate   sin 40 0 (2*pi)
