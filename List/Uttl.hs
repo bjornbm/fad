@@ -21,3 +21,13 @@ _      !!~ i | i<0 = error "negative index"
 [x]    !!~ _       = x
 (x:_)  !!~ 0       = x
 (x:xs) !!~ i       = xs !!~ (i-1)
+
+-- | The 'indexDefault' function indexes into a list like @(!!)@, but
+-- returns the given default when it runs off the end.
+
+indexDefault :: a -> [a] -> Int -> a
+
+indexDefault def _       i | i<0 = error "negative index"
+indexDefault def (x:_)   0       = x
+indexDefault def []      i       = def
+indexDefault def (x:xs)  i       = indexDefault def xs (i-1)
