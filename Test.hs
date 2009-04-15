@@ -5,7 +5,7 @@ import Numeric.FAD
 import Data.Complex
 import Test.QuickCheck
 import Data.Function (on)
-import List.Uttl (zipWithDefaults, (!!~))
+import List.Util (zipWithDefaults, (!!~))
 
 
 -- Test only once, useful for properties with no parameters (could use

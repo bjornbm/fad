@@ -87,7 +87,7 @@ where
 import Data.List (transpose)
 import Data.Foldable (Foldable)
 import qualified Data.Foldable (all)
-import List.Uttl (zipWithDefaults, indexDefault)
+import List.Util (zipWithDefaults, indexDefault)
 import Data.Function (on)
 
 -- To Do:
