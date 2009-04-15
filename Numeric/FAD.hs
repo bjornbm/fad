@@ -202,6 +202,7 @@ apply = (. (`bundle` 1))
 -- | element is the first derivative, etc.
 towerElt :: Num a => Int -> Tower tag a -> a
 towerElt i (Tower xs) = xs !!!! i
+    where (!!!!) = indexDefault (Just 0)
 
 -- | The 'fromTower' function converts a derivative tower to a list of
 -- values with the i-th derivatives, i=0,1,..., possibly truncated
@@ -559,9 +560,6 @@ zeroPad = (++ repeat 0)
 zeroPadF :: (Num a, Functor f) => [f a] -> [f a]
 zeroPadF fxs@(fx:_) = fxs ++ repeat (fmap (const 0) fx)
 
-(!!!!) :: Num a => [a] -> Int -> a
-(!!!!) = indexDefault 0
-
 -- | The 'transposePad' function is like Data.List.transpose except
 -- that it fills in missing elements with 0 rather than skipping them.
 -- It can give a ragged output to a ragged input, but the lengths in
@@ -580,6 +578,7 @@ transposePadF fx =
     if Data.Foldable.all null fx
     then []
     else (fmap (!!!!0) fx) : (transposePadF (fmap (drop 1) fx))
+    where (!!!!) = indexDefault (Just 0)
 
 -- The 'transposeF' function transposes w/ infinite zero row padding.
 

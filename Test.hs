@@ -5,7 +5,7 @@ import Numeric.FAD
 import Data.Complex
 import Test.QuickCheck
 import Data.Function (on)
-import List.Util (zipWithDefaults, (!!~))
+import List.Util (zipWithDefaults, indexDefault)
 
 
 -- Test only once, useful for properties with no parameters (could use
@@ -107,6 +107,7 @@ taylor_accurate f n x dx = s !!~ 0 ~= f0 x &&
                            s !!~ n ~= f0 (x+dx)
     where s = taylor f x dx
           f0 = primalUU f
+          (!!~) = indexDefault Nothing
 
 taylor_accurate_p :: (forall tag. Tower tag Double -> Tower tag Double) ->
                  Int -> Double -> Double -> Double -> Double -> Property

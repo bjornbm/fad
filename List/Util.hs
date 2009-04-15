@@ -12,22 +12,15 @@ zipWithDefaults f x0 y0 xs [] = map (flip f y0) xs
 zipWithDefaults f x0 y0 [] ys = map (f x0) ys
 zipWithDefaults f x0 y0 (x:xs) (y:ys) = f x y:zipWithDefaults f x0 y0 xs ys
 
--- | The '(!!~)' function indexes into a list like @(!!)@, but sticks
--- with the last element when it runs off the end.
-
-(!!~) :: [a] -> Int -> a
-
-_      !!~ i | i<0 = error "negative index"
-[x]    !!~ _       = x
-(x:_)  !!~ 0       = x
-(x:xs) !!~ i       = xs !!~ (i-1)
-
 -- | The 'indexDefault' function indexes into a list like @(!!)@, but
--- returns the given default when it runs off the end.
+-- when it runs off the end either returns the given default or, if no
+-- default is given, sticks with the last element.
 
-indexDefault :: a -> [a] -> Int -> a
+indexDefault :: Maybe a -> [a] -> Int -> a
 
-indexDefault def _       i | i<0 = error "negative index"
-indexDefault def (x:_)   0       = x
-indexDefault def []      i       = def
-indexDefault def (x:xs)  i       = indexDefault def xs (i-1)
+indexDefault _          _      i | i<0 = error "negative index"
+indexDefault _          (x:_)  0       = x
+indexDefault Nothing    [x]    _       = x
+indexDefault (Just def) []     _       = def
+indexDefault m          (x:xs) i       = indexDefault m xs (i-1)
+indexDefault Nothing    []     0       = error "no ultimate element"
