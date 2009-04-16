@@ -8,8 +8,8 @@ where
 
 zipWithDefaults :: (a -> b -> c) -> a -> b -> [a] -> [b] -> [c]
 zipWithDefaults f x0 y0 [] [] = []
-zipWithDefaults f x0 y0 xs [] = map (flip f y0) xs
-zipWithDefaults f x0 y0 [] ys = map (f x0) ys
+zipWithDefaults f x0 y0 xs [] = map (`f`y0) xs
+zipWithDefaults f x0 y0 [] ys = map (x0`f`) ys
 zipWithDefaults f x0 y0 (x:xs) (y:ys) = f x y:zipWithDefaults f x0 y0 xs ys
 
 -- | The 'indexDefault' function indexes into a list like @(!!)@, but
@@ -18,9 +18,9 @@ zipWithDefaults f x0 y0 (x:xs) (y:ys) = f x y:zipWithDefaults f x0 y0 xs ys
 
 indexDefault :: Maybe a -> [a] -> Int -> a
 
-indexDefault _          _      i | i<0 = error "negative index"
-indexDefault _          (x:_)  0       = x
-indexDefault Nothing    [x]    _       = x
-indexDefault (Just def) []     _       = def
-indexDefault m          (x:xs) i       = indexDefault m xs (i-1)
-indexDefault Nothing    []     0       = error "no ultimate element"
+indexDefault _        _      i | i<0 = error "negative index"
+indexDefault _        (x:_)  0       = x
+indexDefault Nothing  [x]    _       = x
+indexDefault (Just x) []     _       = x
+indexDefault m        (_:xs) i       = indexDefault m xs (i-1)
+indexDefault Nothing  []     0       = error "no ultimate element"
