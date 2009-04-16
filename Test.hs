@@ -184,6 +184,10 @@ main = do
   -- cos
   onceCheck  $ taylor_accurate   cos 40 0 (2*pi)
   quickCheck $ taylor_accurate_p cos 40 (-2.5*pi) (2.5*pi)
+  -- tan
+  onceCheck $ taylor_accurate tan 15 0 (pi/8)
+  -- trig identity
+  quickCheck $ taylor_accurate_p (\x -> sin x * cos x - sin (2*x) / 2) 10 (-5) 5
   -- asin
   quickCheck $ taylor_accurate_p (asin . sin) 10 (-0.9) (0.9) 0.1
   -- acos
@@ -207,6 +211,10 @@ main = do
   -- (==)
   onceCheck  $ diffs (id_c 7) 3 == [3,1]
   onceCheck  $ diffs (id_c 7) 7 == [7]
+  -- succ
+  onceCheck  $ diffs succ 17 == [18,1]
+  -- pred
+  onceCheck  $ diffs pred 17 == [16,1]
   -- The [x..] bug:
   onceCheck          $ diff (\x->[x]   !! 0) 7 == 1
   --BUG-- onceCheck  $ diff (\x->[x..] !! 0) 7 == 1     -- actually returns 0

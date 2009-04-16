@@ -384,6 +384,7 @@ instance Floating a => Floating (Tower tag a) where
     (**)	= liftA2_ (**) (\z x y -> (y*z/x, z*log x))
     sin		= liftA1 sin cos
     cos		= liftA1 cos (negate . sin)
+    tan         = liftA1 tan (recip . (^2) . cos)
     asin	= liftA1 asin (recip . sqrt . (1-) . (^2))
     acos	= liftA1 acos (negate . recip . sqrt . (1-) . (^2))
     atan	= liftA1 atan (recip . (1+) . (^2))
