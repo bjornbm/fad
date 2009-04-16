@@ -131,6 +131,8 @@ taylor2_accurate f nx ny x y dx dy =
             &&
       f2 (x+dx) (y+dy) ~= s2 !! nx !! ny
 
+id_c c x = if x==c then c else x
+
 -- Test all properties.
 main = do
   quickCheck prop_is1
@@ -143,28 +145,69 @@ main = do
   onceCheck  prop_zeroNewton_1
   onceCheck  prop_zeroNewton_2
   onceCheck  prop_inverseNewton
-  quickCheck prop_atan2_shouldBeOne
-  onceCheck  $ prop_atan2_shouldBeOne (pi/2)
   onceCheck prop_diffs_1
   onceCheck prop_diffs_2
   onceCheck prop_diffs_3
   onceCheck prop_diffs_4
   onceCheck  $ prop_diffs_5 1024
+  -- (+)
   quickCheck $ \x -> taylor_accurate_p (+(lift x))         1 (-1e9) 1e9
   quickCheck $ \x -> taylor_accurate_p ((lift x)+)         1 (-1e9) 1e9
+  -- (-)
   quickCheck $ \x -> taylor_accurate_p (flip (-) (lift x)) 1 (-1e9) 1e9
   quickCheck $ \x -> taylor_accurate_p ((lift x)-)         1 (-1e9) 1e9
+  -- (*)
   quickCheck $ \x -> taylor_accurate_p (*(lift x))         1 (-1e9) 1e9
   quickCheck $ \x -> taylor_accurate_p ((lift x)*)         1 (-1e9) 1e9
+  -- abs
   quickCheck $ taylor_accurate_p abs 1 (-1) 1e9 1
   quickCheck $ taylor_accurate_p abs 1 (-1e9) 1 (-1)
+  -- recip
   quickCheck $ taylor_accurate_p recip 12 (-50) 50 200
   quickCheck $ taylor_accurate_p recip 12 (-50) 50 (-200)
+  -- negate
   quickCheck $ taylor_accurate_p negate 1 (-1e9) 1e9
+  -- pi
+  onceCheck  $ diffs (const pi) 17 == [pi]
+  -- exp
   quickCheck $ taylor_accurate_p exp 40 (-4) 4
-  onceCheck  $ taylor_accurate   sin 40 0 (2*pi)
-  quickCheck $ taylor_accurate_p sin 40 (-2.5*pi) (2.5*pi)
+  -- sqrt
   quickCheck $ taylor_accurate_p sqrt 10 (-1) 1 10
+  -- log
   quickCheck $ taylor_accurate_p log 10 (-1) 1 (exp 2)
+  -- (**)
   quickCheck $ taylor_accurate_p (**2.5) 12 (-0.5) 1 3
   quickCheck $ taylor_accurate_p (2.5**) 12 (-0.5) 1 3
+  -- sin
+  onceCheck  $ taylor_accurate   sin 40 0 (2*pi)
+  quickCheck $ taylor_accurate_p sin 40 (-2.5*pi) (2.5*pi)
+  -- cos
+  onceCheck  $ taylor_accurate   cos 40 0 (2*pi)
+  quickCheck $ taylor_accurate_p cos 40 (-2.5*pi) (2.5*pi)
+  -- asin
+  quickCheck $ taylor_accurate_p (asin . sin) 10 (-0.9) (0.9) 0.1
+  -- acos
+  quickCheck $ taylor_accurate_p (acos . cos) 10 (-1) 1 (pi/3)
+  -- atan
+  quickCheck $ taylor_accurate_p (atan . tan) 10 (-1) 1 0.1
+  -- sinh
+  quickCheck $ taylor_accurate_p sinh 40 (-5) 5 0.1
+  -- cosh
+  quickCheck $ taylor_accurate_p cosh 40 (-5) 5 0.1
+  -- tanh ?
+  -- asinh
+  onceCheck  $ taylor_accurate asinh 15 0.1 0.3
+  -- acosh
+  onceCheck  $ taylor_accurate acosh 15 2 0.2
+  -- atanh
+  onceCheck  $ taylor_accurate atanh 15 0.1 0.2
+  -- atan2
+  quickCheck prop_atan2_shouldBeOne
+  onceCheck  $ prop_atan2_shouldBeOne (pi/2)
+  -- (==)
+  onceCheck  $ diffs (id_c 7) 3 == [3,1]
+  onceCheck  $ diffs (id_c 7) 7 == [7]
+  -- The [x..] bug:
+  onceCheck          $ diff (\x->[x]   !! 0) 7 == 1
+  --BUG-- onceCheck  $ diff (\x->[x..] !! 0) 7 == 1     -- actually returns 0
+  --BUG-- onceCheck  $ diff (\x->[0,x..] !! 2) 13 == 26 -- actually returns 0

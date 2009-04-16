@@ -97,6 +97,7 @@ import Data.Function (on)
 --  Add pointers into literature
 --  Fix complex number issues (requires changes to standard prelude)
 --  Optimize for efficiency
+--  Address [x..] bug, see below
 
 -- Notes:
 
@@ -461,6 +462,18 @@ instance (Eq a, Num a) => Eq (Tower tag a) where
 
 instance (Ord a, Num a) => Ord (Tower tag a) where
     compare	= liftA2disc compare
+
+
+
+{-
+  The [x..] bug:
+
+  > diff (\x->[x]   !! 0) 7
+  1                                   -- Correct
+
+  > diff (\x->[x..] !! 0) 7
+  0                                   -- Incorrect!
+-}
 
 instance (Enum a, Num a) => Enum (Tower tag a) where
     succ	= liftA1 succ (const 1)
