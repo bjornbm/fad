@@ -476,11 +476,20 @@ instance (Ord a, Num a) => Ord (Tower tag a) where
   0                                   -- Incorrect!
 -}
 
-instance (Enum a, Num a) => Enum (Tower tag a) where
+instance (Enum a, Num a, Ord a) => Enum (Tower tag a) where
     succ	= liftA1 succ (const 1)
     pred	= liftA1 pred (const 1)
-    fromEnum	= liftA1disc fromEnum
-    toEnum	= lift . toEnum
+    -- this would be a bug, as it would discard the tower:
+    --  fromEnum	= liftA1disc fromEnum
+    fromEnum (Tower [])   = 0
+    fromEnum (Tower [x0]) = fromEnum x0
+    fromEnum _		  = error "fromEnum of Dual number with tower"
+    toEnum		  = lift . toEnum
+    enumFrom		  = iterate succ			-- [n..]
+    enumFromThen n n'	  = iterate (+(n'-n)) n			-- [n,n'..]
+    enumFromTo n m	  = takeWhile (<=m) (enumFrom n)	-- [n..m]
+    enumFromThenTo n n' m					-- [n,n'..m]
+        = takeWhile (if n' >= n then (<= m) else (>= m)) (enumFromThen n n')
 
 -- First-Order Differentiation Operators
 

@@ -185,7 +185,7 @@ main = do
   onceCheck  $ taylor_accurate   cos 40 0 (2*pi)
   quickCheck $ taylor_accurate_p cos 40 (-2.5*pi) (2.5*pi)
   -- tan
-  onceCheck $ taylor_accurate tan 15 0 (pi/8)
+  onceCheck  $ taylor_accurate tan 15 0 (pi/8)
   -- trig identity
   quickCheck $ taylor_accurate_p (\x -> sin x * cos x - sin (2*x) / 2) 10 (-5) 5
   -- asin
@@ -206,7 +206,7 @@ main = do
   -- atanh
   onceCheck  $ taylor_accurate atanh 15 0.1 0.2
   -- atan2
-  quickCheck prop_atan2_shouldBeOne
+  quickCheck $ prop_atan2_shouldBeOne
   onceCheck  $ prop_atan2_shouldBeOne (pi/2)
   -- (==)
   onceCheck  $ diffs (id_c 7) 3 == [3,1]
@@ -215,7 +215,8 @@ main = do
   onceCheck  $ diffs succ 17 == [18,1]
   -- pred
   onceCheck  $ diffs pred 17 == [16,1]
-  -- The [x..] bug:
-  onceCheck          $ diff (\x->[x]   !! 0) 7 == 1
-  --BUG-- onceCheck  $ diff (\x->[x..] !! 0) 7 == 1     -- actually returns 0
-  --BUG-- onceCheck  $ diff (\x->[0,x..] !! 2) 13 == 26 -- actually returns 0
+  -- The [x..] construct
+  onceCheck  $ diff (\x->[x]   !! 0) 7 == 1
+  onceCheck  $ diff (\x->[x..] !! 0) 7 == 1
+  onceCheck  $ diff (\x->[0,x..] !! 2) 7 == 2
+  -- onceCheck  $ diffsUF (\x->[1,x..4.5]) 2 !! 0 == (\x->[1,x..4.5]) 2 -- BUG?
