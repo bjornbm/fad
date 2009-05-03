@@ -1,21 +1,40 @@
 \documentclass{article}
 
 \usepackage{hcar}
+\usepackage{paralist}
 
 \begin{document}
 
 \begin{hcarentry}{fad: Forward Automatic Differentiation}
 \report{Bj\"orn Buckwalter}%05/09
 \status{active}
-\participants{Barak A.~Pearlmutter, Jeffrey Mark Siskind}% optional
+\participants{Barak A.\ Pearlmutter, Jeffrey Mark Siskind}% optional
 \makeheader
 
 %(WHAT IS IT?)
-Fad is an attempt to make as comprehensive and usable a forward automatic differentiation (AD) library as is possible in Haskell.
-Fad's defining quality is that it leverages Haskell's expressive type system to tackle the problem of perturbation confusion.
+
+Fad is an attempt to make as comprehensive and usable a forward
+automatic differentiation (AD) library as is possible in Haskell.  Fad
+\begin{inparaenum}[(a)]
+\item attempts to be correct, by making it difficult to accidentally
+  get a numerically incorrect derivative;
+\item provides not only first-derivatives, but also a lazy tower of
+  and higher-order derivatives;
+\item allows nested use of the derivative operators, detecting and
+  rejecting incorrect instances of nesting (perturbation confusion) by
+  leveraging Haskell's type system;
+\item attempts to be complete, in the sense of allowing calculation of
+  derivatives of functions defined using various Haskell constructs;
+  and
+\item tries to be efficient, in the sense of both the defining
+  properties of forward automatic differentiation and in keeping the
+  constant factor overhead as low as possible.
+\end{inparaenum}
 
 %(WHAT IS ITS STATUS? / WHAT HAS HAPPENED SINCE LAST TIME?)
-Version 1.0 of fad was uploaded to Hackage on April 3. Recent changes can be found in the Git repository on GitHub.
+
+Version 1.0 of fad was uploaded to Hackage on April 3. Recent changes
+can be found in the Git repository on GitHub.
 
 %(CAN OTHERS GET IT?)
 
