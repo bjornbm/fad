@@ -2,6 +2,7 @@
 
 \usepackage{hcar}
 \usepackage{paralist}
+\urlstyle{tt}
 
 \begin{document}
 
@@ -20,12 +21,11 @@ automatic differentiation (AD) library as is possible in Haskell.  Fad
   get a numerically incorrect derivative;
 \item provides not only first-derivatives, but also a lazy tower of
   higher-order derivatives;
-\item allows nested use of the derivative operators, detecting and
-  rejecting incorrect instances of nesting (perturbation confusion) by
-  leveraging Haskell's type system;
+\item allows nested use of derivative operators while using the type
+  system to reject incorrect nesting (perturbation confusion);
 \item attempts to be complete, in the sense of allowing calculation of
-  derivatives of functions defined using various Haskell constructs;
-  and
+  derivatives of functions defined using a large variety of Haskell
+  constructs; and
 \item tries to be efficient, in the sense of both the defining
   properties of forward automatic differentiation and in keeping the
   constant factor overhead as low as possible.
@@ -34,7 +34,7 @@ automatic differentiation (AD) library as is possible in Haskell.  Fad
 %(WHAT IS ITS STATUS? / WHAT HAS HAPPENED SINCE LAST TIME?)
 
 Version 1.0 of fad was uploaded to Hackage on April 3. Recent changes
-can be found in the Git repository on GitHub.
+can be found via \texttt{git clone} \url{git://github.com/bjornbm/fad.git}
 
 %(CAN OTHERS GET IT?)
 
