@@ -495,6 +495,15 @@ instance (Enum a, Num a, Ord a) => Enum (Tower tag a) where
     enumFromThenTo n n' m					-- [n,n'..m]
         = takeWhile (if n' >= n then (<= m) else (>= m)) (enumFromThen n n')
 
+instance Integral a => Integral (Tower tag a) where
+    -- this would be a bug, as it would discard the tower:
+    --  toInteger	= liftA1disc toInteger
+    toInteger (Tower [])   = 0
+    toInteger (Tower [x0]) = toInteger x0
+    toInteger _		   = error "toInteger of Dual number with tower"
+    -- div, mod, etc., not implemented: not in general differentiable
+    quotRem a b = error "quotRem of Dual number"
+
 -- First-Order Differentiation Operators
 
 {- $fodo
