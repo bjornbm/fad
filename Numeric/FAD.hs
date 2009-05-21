@@ -456,7 +456,11 @@ instance RealFrac a => RealFrac (Tower tag a) where
     floor	= liftA1disc floor
 
 instance Real a => Real (Tower tag a) where
-    toRational	= liftA1disc toRational
+    -- this would be a bug, as it would discard the tower:
+    --  toRational	= liftA1disc toRational
+    toRational (Tower [])   = 0
+    toRational (Tower [x0]) = toRational x0
+    toRational _            = error "toRational of Dual number with tower"
 
 instance (Eq a, Num a) => Eq (Tower tag a) where
     (==)	= liftA2disc (==)
