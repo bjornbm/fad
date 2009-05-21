@@ -7,3 +7,7 @@
 dist/
 /Test
 /Makefile
+/hcar.aux
+/hcar.dvi
+/hcar.log
+/hcar.sty
