@@ -10,7 +10,7 @@ import List.Util (zipWithDefaults, indexDefault)
 
 -- Test only once, useful for properties with no parameters (could use
 -- HUnit for such tests instead.)
-onceCheck = check (defaultConfig {configMaxTest = 1})
+onceCheck = quickCheckWith stdArgs { maxSuccess = 1 }
 
 -- | Comparison allowing for inaccuracy.  Not transitive.
 
