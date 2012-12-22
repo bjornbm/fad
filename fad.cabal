@@ -19,7 +19,7 @@ Description:
 
 Category:            Math
 Build-Type:          Simple
-Build-Depends:       base
+Build-Depends:       base < 5
 Exposed-Modules:     Numeric.FAD
 Other-Modules:       List.Util
 Extra-source-files:  README, Test.hs
