@@ -13,6 +13,10 @@ Description:
     nonstandard interpretation that replaces original numeric type with
     corresponding generalized dual number type.
     Existential type \"branding\" is used to prevent perturbation confusion.
+
+    **Note: In general we recommend using the ad package maintained by
+    Edward Kmett instead of this package.**
+
 Category:            Math
 Build-Type:          Simple
 Build-Depends:       base
